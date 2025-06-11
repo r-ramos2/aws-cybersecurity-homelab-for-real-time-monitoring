@@ -100,7 +100,7 @@ A public VPC with three EC2 hosts in a public subnet, secured by dedicated secur
 ### Clone the repo
 
 ```bash
-git clone https://github.com/your-username/your-repo.git
+git clone https://github.com/r-ramos2/scalable-aws-cybersecurity-lab-for-real-time-monitoring-and-vulnerability-management.git
 cd your-repo/terraform
 ```
 
