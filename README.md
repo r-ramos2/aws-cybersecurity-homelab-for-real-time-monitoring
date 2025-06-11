@@ -39,7 +39,6 @@ All infrastructure is defined in Terraform for reproducibility, security, and sc
 9. [Best Practices](#best-practices)
 10. [Next Steps & Enhancements](#next-steps--enhancements)
 11. [Resources](#resources)
-12. [License](#license)
 
 ---
 
@@ -223,9 +222,3 @@ terraform destroy -auto-approve
 * [Tenable Nessus Docs](https://docs.tenable.com/nessus/)
 * [Kali Linux](https://www.kali.org/)
 * [Windows 10](https://support.microsoft.com/windows)
-
----
-
-## License
-
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
