@@ -1,176 +1,231 @@
 # Scalable AWS Cybersecurity Lab for Real-Time Monitoring and Vulnerability Management
 
-## Table of Contents  
+[![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5.0-blue)](https://www.terraform.io/)  [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-1. [Introduction](#introduction)  
-2. [Lab Architecture Overview](#lab-architecture-overview)  
-3. [Prerequisites](#prerequisites)  
-4. [Setting Up the Environment](#setting-up-the-environment)  
-   - [AWS Account Configuration](#aws-account-configuration)  
-   - [Provisioning Infrastructure with Terraform](#provisioning-infrastructure-with-terraform)  
-5. [Configuring the Instances](#configuring-the-instances)  
-   - [Kali Linux Setup](#kali-linux-setup)  
-   - [Windows 10 Workstation Setup](#windows-10-workstation-setup)  
-   - [Security Tools Box (Ubuntu) Setup](#security-tools-box-ubuntu-setup)  
-6. [Installing and Configuring Tools](#installing-and-configuring-tools)  
-   - [Splunk Enterprise](#splunk-enterprise)  
-   - [Universal Forwarder for Windows Logs](#universal-forwarder-for-windows-logs)  
-   - [Tenable Nessus Essentials](#tenable-nessus-essentials)  
-7. [Best Practices and Security Measures](#best-practices-and-security-measures)  
-8. [Potential Enhancements and Next Steps](#potential-enhancements-and-next-steps)  
-9. [Conclusion](#conclusion)  
-10. [Resources](#resources)  
+☁️ **Cloud Cybersecurity Homelab**
+
+Deploy an attack/defend cybersecurity home lab on AWS, including:
+
+* **Kali Linux** for penetration testing
+* **Windows 10** as the attack target
+* **Security Tools Box (Ubuntu)** hosting Splunk Enterprise & Nessus Essentials
+
+All infrastructure is defined in Terraform for reproducibility, security, and scalability.
 
 ---
 
-## Introduction  
+## Table of Contents
 
-This project demonstrates the creation of a cloud-based cybersecurity home lab on AWS. It consists of three core systems: a **Kali Linux instance** for penetration testing, a **Windows 10 instance** serving as a target for attacks, and a **Security Tools Box (Ubuntu)** hosting tools like **Splunk** and **Tenable Nessus**. The infrastructure is managed using **Terraform**, ensuring scalability, reproducibility, and adherence to security best practices.  
+1. [Topology](#topology)
+2. [Architecture Overview](#architecture-overview)
+3. [Prerequisites](#prerequisites)
+4. [Repository Structure](#repository-structure)
+5. [Getting Started](#getting-started)
 
----
+   * [Clone the repo](#clone-the-repo)
+   * [Configure AWS CLI & Terraform](#configure-aws-cli--terraform)
+   * [Deploy with Terraform](#deploy-with-terraform)
+6. [Instance Configuration](#instance-configuration)
 
-## Lab Architecture Overview  
+   * [Kali Linux](#kali-linux)
+   * [Windows 10](#windows-10)
+   * [Security Tools Box (Ubuntu)](#security-tools-box-ubuntu)
+7. [Install & Configure Tools](#install--configure-tools)
 
-### Components:  
-- **Kali Linux**: A penetration testing platform for vulnerability assessments.  
-- **Windows 10 Workstation**: The target system for simulating attacks.  
-- **Security Tools Box (Ubuntu)**: Runs Splunk for log management and Tenable Nessus for vulnerability scanning.  
-
-### Network Architecture:  
-- **VPC**: Isolated environment for lab resources.  
-- **Subnets**: Public subnet for accessible systems and private subnet for internal services.  
-- **Security Groups**: Firewall rules control SSH, RDP, and HTTP/S traffic.  
-
-<img width="872" alt="2 396430826-9bab234a-a197-4089-b8e5-62cdeb9e9ba1" src="https://github.com/user-attachments/assets/4b20576d-3fa6-4f0c-8b35-3ab63c32cde9" />
-
-*Architecutre diagram*
-
----
-
-## Prerequisites  
-
-Before starting:  
-- **AWS Account** with necessary permissions for EC2, VPC, S3, and IAM.  
-- **Terraform** installed locally.  
-- **SSH Client** (e.g., OpenSSH or PuTTY) and **RDP Client** for remote connections.  
+   * [Splunk Enterprise](#splunk-enterprise)
+   * [Universal Forwarder (Windows)](#universal-forwarder-windows)
+   * [Tenable Nessus Essentials](#tenable-nessus-essentials)
+8. [Cleanup](#cleanup)
+9. [Best Practices](#best-practices)
+10. [Next Steps & Enhancements](#next-steps--enhancements)
+11. [Resources](#resources)
+12. [License](#license)
 
 ---
 
-## Setting Up the Environment  
+## Topology
 
-### AWS Account Configuration  
+[<img width="872" alt="429640939-4b20576d-3fa6-4f0c-8b35-3ab63c32cde9" src="https://github.com/user-attachments/assets/86846a94-2e43-47ad-be05-23a0410bfb7b" />](https://github.com/r-ramos2/scalable-aws-cybersecurity-lab-for-real-time-monitoring-and-vulnerability-management/blob/main/images/architecture-diagram.png?raw=true)
 
-1. Create a dedicated **IAM User** with programmatic access and permissions for EC2, VPC, S3, and IAM.  
-2. Install and configure the **AWS CLI** with IAM user credentials.  
-
-### Provisioning Infrastructure with Terraform  
-
-1. Clone the repository containing the Terraform configuration files.  
-2. Modify `variables.tf` to include your AWS settings (region, SSH key pair, etc.).  
-3. Run these commands in your terminal to deploy the infrastructure:  
-    ```bash  
-    terraform init  
-    terraform plan  
-    terraform apply  
-    ```  
+A public VPC with three EC2 hosts in a public subnet, secured by dedicated security groups.
 
 ---
 
-## Configuring the Instances  
+## Architecture Overview
 
-### Kali Linux Setup  
+* **VPC**: 10.0.0.0/16
+* **Public Subnet**: 10.0.1.0/24
+* **Internet Gateway & Routing**: Routes all traffic (0.0.0.0/0) to the IGW
+* **Security Groups**:
 
-1. SSH into the Kali Linux instance:  
-    ```bash  
-    ssh -i your-key.pem ubuntu@<Kali-IP>  
-    ```  
-2. Install tools and enable RDP:  
-    ```bash  
-    sudo apt update && sudo apt upgrade -y  
-    sudo apt install -y xrdp firefox  
-    sudo systemctl enable --now xrdp  
-    ```  
-3. Create a user for RDP access:  
-    ```bash  
-    sudo adduser rdpuser  
-    sudo usermod -aG sudo rdpuser  
-    ```  
+  * **Win/Kali SG**: SSH (22), RDP (3389), ICMP
+  * **Tools SG**: SSH (22), Splunk (8000/9997), Nessus (8834), ICMP
+* **EC2 Instances**:
 
-### Windows 10 Workstation Setup  
-
-1. Decrypt the admin password and use an RDP client to connect to the instance.  
-2. Disable the firewall temporarily for initial setup (via Windows Defender Firewall settings).  
-
-### Security Tools Box (Ubuntu) Setup  
-
-1. SSH into the Security Tools instance:  
-    ```bash  
-    ssh -i your-key.pem ubuntu@<Security-Tools-IP>  
-    ```  
-2. Update the system:  
-    ```bash  
-    sudo apt update && sudo apt upgrade -y  
-    ```  
+  1. **`windows`**: Windows 10 (t2.micro)
+  2. **`kali`**: Kali Linux (t2.micro)
+  3. **`security_tools`**: Ubuntu (t3.large)
 
 ---
 
-## Installing and Configuring Tools  
+## Prerequisites
 
-### Splunk Enterprise  
-
-1. Install Splunk:  
-    ```bash  
-    wget -O splunk.deb https://download.splunk.com/releases/9.1.0/splunk.deb  
-    sudo dpkg -i splunk.deb  
-    sudo /opt/splunk/bin/splunk start  
-    ```  
-2. Configure log forwarding via Splunk’s **Settings > Forwarding and Receiving**.  
-
-### Universal Forwarder for Windows Logs  
-
-1. Install the **Splunk Universal Forwarder** on Windows 10.  
-2. Configure the forwarder to send logs to the Splunk instance.  
-
-### Tenable Nessus Essentials  
-
-1. Install Nessus Essentials:  
-    ```bash  
-    wget -O nessus.deb https://www.tenable.com/downloads/nessus  
-    sudo dpkg -i nessus.deb  
-    sudo systemctl start nessusd  
-    ```  
-2. Complete the Nessus setup via its web interface.  
+* **AWS Account** with privileges for EC2, VPC, IAM, S3
+* **AWS CLI** (configured via `aws configure`)
+* **Terraform** >= 1.5.0
+* **SSH Client** (OpenSSH or PuTTY)
+* **RDP Client** (e.g. Microsoft Remote Desktop)
 
 ---
 
-## Best Practices and Security Measures  
+## Repository Structure
 
-- **IAM Best Practices**: Implement least privilege and rotate credentials regularly.  
-- **Security Groups**: Restrict SSH, RDP, and HTTP access to specific IPs.  
-- **Key Management**: Rotate SSH keys periodically and use strong passwords.  
-- **Logging**: Enable **CloudTrail** and **CloudWatch** for monitoring.  
-
----
-
-## Potential Enhancements and Next Steps  
-
-- **Automation**: Use **Ansible** to configure tools and systems.  
-- **Intrusion Detection**: Add tools like **Snort** or **Suricata** for network monitoring.  
-- **Containerization**: Simulate containerized environments using **Docker** or **Kubernetes**.  
-
----
-
-## Conclusion  
-
-This project showcases the design and deployment of a cloud-based cybersecurity lab on AWS. The lab integrates a secure VPC with three key components: a Kali Linux instance for penetration testing, a Windows 10 workstation for simulating attacks, and an Ubuntu server hosting security tools like Splunk and Nessus. Infrastructure is deployed with Terraform, following cloud security best practices. This lab serves as a scalable platform for practicing security operations, testing vulnerabilities, and deploying advanced monitoring solutions.  
+```text
+├── images/               # Architecture diagram
+├── scripts/              # Post-launch helper scripts
+│   ├── nessus_install.sh
+│   └── rdp.sh
+├── terraform/            # Terraform config
+│   ├── provider.tf
+│   ├── variables.tf
+│   ├── main.tf
+│   └── outputs.tf
+└── README.md             # This file
+```
 
 ---
 
-## Resources  
+## Getting Started
 
-- [AWS Documentation](https://aws.amazon.com/documentation/)  
-- [Terraform Documentation](https://www.terraform.io/docs)  
-- [Splunk Documentation](https://docs.splunk.com)  
-- [Tenable Nessus Documentation](https://docs.tenable.com/nessus/)  
-- [Kali Linux Official Site](https://www.kali.org/)  
-- [Windows 10 Documentation](https://support.microsoft.com/en-us/windows)  
+### Clone the repo
+
+```bash
+git clone https://github.com/your-username/your-repo.git
+cd your-repo/terraform
+```
+
+### Configure AWS CLI & Terraform
+
+1. **AWS credentials**: `aws configure`
+2. **Variables**: Review `variables.tf` and override via `terraform.tfvars` or environment variables.
+
+### Deploy with Terraform
+
+```bash
+terraform init
+terraform plan -out=plan.out
+terraform apply plan.out
+```
+
+Upon success, Terraform will output the public IPs for each instance and the path to your SSH private key.
+
+---
+
+## Instance Configuration
+
+### Kali Linux
+
+```bash
+ssh -i ../deployer_key.pem ubuntu@<KALI_PUBLIC_IP>
+# Enable RDP and XFCE
+echo "Running RDP setup..."
+bash ../scripts/rdp.sh
+# Create RDP user
+sudo adduser rdpuser && sudo usermod -aG sudo rdpuser
+```
+
+### Windows 10
+
+1. **Retrieve admin password** from AWS Console
+2. **RDP**: `rdp://<WINDOWS_PUBLIC_IP>`
+3. (Optional) Temporarily disable Firewall for testing
+
+### Security Tools Box (Ubuntu)
+
+```bash
+ssh -i ../deployer_key.pem ubuntu@<TOOLS_PUBLIC_IP>
+sudo apt update && sudo apt upgrade -y
+bash ../scripts/nessus_install.sh
+```
+
+---
+
+## Install & Configure Tools
+
+### Splunk Enterprise
+
+```bash
+wget -O splunk.deb https://download.splunk.com/releases/9.1.0/linux/splunk.deb
+sudo dpkg -i splunk.deb
+sudo /opt/splunk/bin/splunk start --accept-license --answer-yes
+```
+
+* Web UI: `http://<TOOLS_PUBLIC_IP>:8000`
+* Forwarder port: 9997
+
+### Universal Forwarder (Windows)
+
+1. **Install** the Splunk UF MSI on Windows 10
+2. **Configure inputs**: place `splunk_inputs.conf` in `C:\Program Files\SplunkUniversalForwarder\etc\system\local\`
+3. **Edit** target to `<TOOLS_PRIVATE_IP>:9997`
+4. **Restart**:
+
+   ```powershell
+   cd "C:\Program Files\SplunkUniversalForwarder\bin\"
+   .\splunk.exe restart
+   ```
+
+### Tenable Nessus Essentials
+
+```bash
+wget -O nessus.deb "https://www.tenable.com/downloads/api/.../nessus/download?i_agree_to_tenable_license_agreement=true"
+sudo dpkg -i nessus.deb
+sudo systemctl enable --now nessusd
+```
+
+* UI: `https://<TOOLS_PUBLIC_IP>:8834`
+
+---
+
+## Cleanup
+
+```bash
+cd terraform
+terraform destroy -auto-approve
+```
+
+---
+
+## Best Practices
+
+* **Least-Privilege IAM**: use roles & rotate credentials
+* **Security Groups**: restrict to your office/VPN CIDR
+* **Key Management**: rotate SSH keys regularly
+* **Logging & Monitoring**: enable CloudTrail, CloudWatch, and Alerts
+
+---
+
+## Next Steps & Enhancements
+
+* Use **Terraform modules** for network, security, and compute
+* Configure **remote state** in S3 with DynamoDB locking
+* Integrate **Ansible** for post-provisioning
+* Add **IDS/IPS** (Suricata, Zeek)
+* Containerize workloads with **Docker/Kubernetes**
+
+---
+
+## Resources
+
+* [AWS Documentation](https://aws.amazon.com/documentation/)
+* [Terraform Docs](https://www.terraform.io/docs)
+* [Splunk Docs](https://docs.splunk.com)
+* [Tenable Nessus Docs](https://docs.tenable.com/nessus/)
+* [Kali Linux](https://www.kali.org/)
+* [Windows 10](https://support.microsoft.com/windows)
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
