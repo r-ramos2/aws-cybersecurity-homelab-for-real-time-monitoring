@@ -8,7 +8,7 @@ variable "region" {
 variable "key_name_prefix" {
   description = "Prefix for the auto-generated SSH keypair"
   type        = string
-  default     = "lab-deployer"
+  default     = "cyberlab-deployer"
 }
 
 # Networking
