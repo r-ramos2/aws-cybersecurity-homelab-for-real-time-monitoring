@@ -1,6 +1,6 @@
 //main.tf
 locals {
-  project_name = "Cyber Lab"
+  project_name = "aws-cybersecurity-lab"
   common_tags  = { Project = local.project_name }
 }
 
@@ -64,7 +64,7 @@ resource "aws_vpc" "lab" {
 
   tags = merge(
     local.common_tags,
-    { Name = "${local.project_name} VPC" }
+    { Name = "${local.project_name}-vpc" }
   )
 }
 
@@ -76,7 +76,7 @@ resource "aws_subnet" "public" {
 
   tags = merge(
     local.common_tags,
-    { Name = "${local.project_name} Public Subnet" }
+    { Name = "${local.project_name}-public-subnet" }
   )
 }
 
@@ -85,7 +85,7 @@ resource "aws_internet_gateway" "igw" {
 
   tags = merge(
     local.common_tags,
-    { Name = "${local.project_name} IGW" }
+    { Name = "${local.project_name}-igw" }
   )
 }
 
@@ -94,7 +94,7 @@ resource "aws_route_table" "rt" {
 
   tags = merge(
     local.common_tags,
-    { Name = "${local.project_name} RT" }
+    { Name = "${local.project_name}-rt" }
   )
 }
 
@@ -151,7 +151,7 @@ resource "aws_security_group" "win_kali_sg" {
 
   tags = merge(
     local.common_tags,
-    { Name = "${local.project_name} Win/Kali SG" }
+    { Name = "${local.project_name}-win-kali-sg" }
   )
 }
 
