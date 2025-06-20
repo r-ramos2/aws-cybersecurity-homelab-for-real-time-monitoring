@@ -1,7 +1,9 @@
 // main.tf
 locals {
-  project_name = "Cyber Lab"
-  common_tags  = { Project = local.project_name }
+  project_name = "aws-cyber-homelab"
+  common_tags  = {
+    Project = local.project_name
+  }
 }
 
 # 1. SSH Keypair
