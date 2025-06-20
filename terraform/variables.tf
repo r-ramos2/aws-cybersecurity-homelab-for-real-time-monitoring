@@ -78,6 +78,21 @@ variable "rdp_port" {
   type        = number
   default     = 3389
 }
+variable "splunk_web_port" {
+  description = "Splunk Web UI port"
+  type        = number
+  default     = 8000
+}
+variable "splunk_forwarder_port" {
+  description = "Splunk Forwarder port"
+  type        = number
+  default     = 9997
+}
+variable "nessus_port" {
+  description = "Nessus UI port"
+  type        = number
+  default     = 8834
+}
 
 # EC2 Sizing
 variable "windows_instance_type" {
@@ -111,21 +126,4 @@ variable "tools_volume_size" {
   description = "Root EBS volume size for Tools server"
   type        = number
   default     = 30
-}
-
-# Tool Ports
-variable "splunk_web_port" {
-  description = "Splunk Web UI port"
-  type        = number
-  default     = 8000
-}
-variable "splunk_forwarder_port" {
-  description = "Splunk Forwarder port"
-  type        = number
-  default     = 9997
-}
-variable "nessus_port" {
-  description = "Nessus UI port"
-  type        = number
-  default     = 8834
 }
