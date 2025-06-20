@@ -100,62 +100,110 @@ resource "aws_route_table_association" "public_assoc" {
 }
 
 # 4. Security Groups
+# Win/Kali Security Group
 resource "aws_security_group" "win_kali_sg" {
   name        = "win-kali-sg"
   description = "Allow SSH, RDP, and ICMP from ${var.allowed_cidr}"
   vpc_id      = aws_vpc.lab.id
 
+  # SSH for Win/Kali management
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = [var.allowed_cidr]
   }
+
+  # RDP to Windows server
   ingress {
     from_port   = 3389
     to_port     = 3389
     protocol    = "tcp"
     cidr_blocks = [var.allowed_cidr]
   }
+
+  # ICMP (ping/traceroute)
   ingress {
     from_port   = -1
     to_port     = -1
     protocol    = "icmp"
     cidr_blocks = [var.allowed_cidr]
   }
+
+  # Allow all outbound
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
   tags = merge(
     local.common_tags,
     { Name = "${local.project_name} Win/Kali SG" }
   )
 }
 
+# Tools Security Group
 resource "aws_security_group" "tools_sg" {
   name        = "tools-sg"
   description = "Allow Splunk, Nessus, SSH & ICMP from ${var.allowed_cidr}"
   vpc_id      = aws_vpc.lab.id
 
+  # SSH for Tools box management
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = [var.allowed_cidr]
   }
-  ingress { from_port = 8000; to_port = 8000; protocol = "tcp"; cidr_blocks = [var.allowed_cidr] }
-  ingress { from_port = 9997; to_port = 9997; protocol = "tcp"; cidr_blocks = [var.allowed_cidr] }
-  ingress { from_port = 8834; to_port = 8834; protocol = "tcp"; cidr_blocks = [var.allowed_cidr] }
-  ingress { from_port = -1; to_port = -1; protocol = "icmp"; cidr_blocks = [var.allowed_cidr] }
-  egress  { from_port = 0; to_port = 0; protocol = "-1"; cidr_blocks = ["0.0.0.0/0"] }
+
+  # Splunk Web UI (8000)
+  ingress {
+    from_port   = 8000
+    to_port     = 8000
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_cidr]
+  }
+
+  # Splunk Forwarder port (9997)
+  ingress {
+    from_port   = 9997
+    to_port     = 9997
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_cidr]
+  }
+
+  # Nessus UI (8834)
+  ingress {
+    from_port   = 8834
+    to_port     = 8834
+    protocol    = "tcp"
+    cidr_blocks = [var.allowed_cidr]
+  }
+
+  # ICMP (ping/traceroute)
+  ingress {
+    from_port   = -1
+    to_port     = -1
+    protocol    = "icmp"
+    cidr_blocks = [var.allowed_cidr]
+  }
+
+  # Allow all outbound
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   tags = merge(
     local.common_tags,
     { Name = "${local.project_name} Tools SG" }
   )
 }
+
 
 # 5. EC2 Instances
 resource "aws_instance" "windows" {
