@@ -1,4 +1,4 @@
-//main.tf
+// main.tf
 locals {
   project_name = "aws-cybersecurity-lab"
   common_tags  = { Project = local.project_name }
@@ -61,11 +61,7 @@ resource "aws_vpc" "lab" {
   cidr_block           = var.vpc_cidr_block
   enable_dns_support   = true
   enable_dns_hostnames = true
-
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-vpc" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name}-vpc" })
 }
 
 resource "aws_subnet" "public" {
@@ -73,29 +69,17 @@ resource "aws_subnet" "public" {
   cidr_block              = var.public_subnet_cidr
   availability_zone       = var.availability_zone
   map_public_ip_on_launch = true
-
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-public-subnet" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name}-public-subnet" })
 }
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.lab.id
-
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-igw" }
-  )
+  tags   = merge(local.common_tags, { Name = "${local.project_name}-igw" })
 }
 
 resource "aws_route_table" "rt" {
   vpc_id = aws_vpc.lab.id
-
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-rt" }
-  )
+  tags   = merge(local.common_tags, { Name = "${local.project_name}-rt" })
 }
 
 resource "aws_route" "default_route" {
@@ -149,10 +133,7 @@ resource "aws_security_group" "win_kali_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-win-kali-sg" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name}-win-kali-sg" })
 }
 
 # Tools Security Group
@@ -209,10 +190,7 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name} Tools SG" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name} Tools SG" })
 }
 
 # 5. EC2 Instances
@@ -228,10 +206,7 @@ resource "aws_instance" "windows" {
     volume_size = var.windows_volume_size
   }
 
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-Windows" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name}-Windows" })
 }
 
 resource "aws_instance" "kali" {
@@ -247,10 +222,7 @@ resource "aws_instance" "kali" {
     volume_size = var.kali_volume_size
   }
 
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-Kali" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name}-Kali" })
 }
 
 resource "aws_instance" "tools" {
@@ -265,10 +237,7 @@ resource "aws_instance" "tools" {
     volume_size = var.tools_volume_size
   }
 
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-Tools" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name}-Tools" })
 }
 
 # 6. Outputs
