@@ -1,6 +1,6 @@
 // main.tf
 locals {
-  project_name = "aws-cyber-homelab"
+  project_name = "aws-cybersecurity-homelab"
   common_tags  = { Project = local.project_name }
 }
 
@@ -25,28 +25,28 @@ resource "local_file" "private_key_pem" {
 # 2. AMI Data Sources
 data "aws_ami" "windows" {
   most_recent = true
-  owners      = ["amazon"]
+  owners      = [var.windows_ami_owner]
   filter {
     name   = "name"
-    values = ["Windows_Server-2019-English-Full-Base-*"]
+    values = [var.windows_ami_name_filter]
   }
 }
 
 data "aws_ami" "kali" {
   most_recent = true
-  owners      = ["679593333241"]
+  owners      = [var.kali_ami_owner]
   filter {
     name   = "name"
-    values = ["kali-*-amd64-*-*"]
+    values = [var.kali_ami_name_filter]
   }
 }
 
 data "aws_ami" "ubuntu" {
   most_recent = true
-  owners      = ["099720109477"]
+  owners      = [var.ubuntu_ami_owner]
   filter {
     name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+    values = [var.ubuntu_ami_name_filter]
   }
 }
 
@@ -55,45 +55,28 @@ resource "aws_vpc" "lab" {
   cidr_block           = var.vpc_cidr_block
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name} VPC" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name} VPC" })
 }
-
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.lab.id
   cidr_block              = var.public_subnet_cidr
   availability_zone       = var.availability_zone
   map_public_ip_on_launch = true
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name} Public Subnet" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name} Public Subnet" })
 }
-
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.lab.id
-  tags   = merge(
-    local.common_tags,
-    { Name = "${local.project_name} IGW" }
-  )
+  tags   = merge(local.common_tags, { Name = "${local.project_name} IGW" })
 }
-
 resource "aws_route_table" "rt" {
   vpc_id = aws_vpc.lab.id
-  tags   = merge(
-    local.common_tags,
-    { Name = "${local.project_name} RT" }
-  )
+  tags   = merge(local.common_tags, { Name = "${local.project_name} RT" })
 }
-
 resource "aws_route" "default_route" {
   route_table_id         = aws_route_table.rt.id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.igw.id
 }
-
 resource "aws_route_table_association" "public_assoc" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.rt.id
@@ -109,16 +92,16 @@ resource "aws_security_group" "win_kali_sg" {
 
   # SSH for Win/Kali management
   ingress {
-    from_port   = 22
-    to_port     = 22
+    from_port   = var.ssh_port
+    to_port     = var.ssh_port
     protocol    = "tcp"
     cidr_blocks = [var.allowed_cidr]
   }
 
   # RDP to Windows server
   ingress {
-    from_port   = 3389
-    to_port     = 3389
+    from_port   = var.rdp_port
+    to_port     = var.rdp_port
     protocol    = "tcp"
     cidr_blocks = [var.allowed_cidr]
   }
@@ -136,13 +119,10 @@ resource "aws_security_group" "win_kali_sg" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.allowed_cidr]
   }
 
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name} Win/Kali SG" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name} Win/Kali SG" })
 }
 
 # Tools Security Group
@@ -153,32 +133,32 @@ resource "aws_security_group" "tools_sg" {
 
   # SSH for Tools box management
   ingress {
-    from_port   = 22
-    to_port     = 22
+    from_port   = var.ssh_port
+    to_port     = var.ssh_port
     protocol    = "tcp"
     cidr_blocks = [var.allowed_cidr]
   }
 
   # Splunk Web UI
   ingress {
-    from_port   = 8000
-    to_port     = 8000
+    from_port   = var.splunk_web_port
+    to_port     = var.splunk_web_port
     protocol    = "tcp"
     cidr_blocks = [var.allowed_cidr]
   }
 
   # Splunk Forwarder port
   ingress {
-    from_port   = 9997
-    to_port     = 9997
+    from_port   = var.splunk_forwarder_port
+    to_port     = var.splunk_forwarder_port
     protocol    = "tcp"
     cidr_blocks = [var.allowed_cidr]
   }
 
   # Nessus UI
   ingress {
-    from_port   = 8834
-    to_port     = 8834
+    from_port   = var.nessus_port
+    to_port     = var.nessus_port
     protocol    = "tcp"
     cidr_blocks = [var.allowed_cidr]
   }
@@ -196,13 +176,10 @@ resource "aws_security_group" "tools_sg" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.allowed_cidr]
   }
 
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name} Tools SG" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name} Tools SG" })
 }
 
 # 5. EC2 Instances
@@ -218,10 +195,7 @@ resource "aws_instance" "windows" {
     volume_size = var.windows_volume_size
   }
 
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-Windows" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name}-Windows" })
 }
 
 resource "aws_instance" "kali" {
@@ -237,10 +211,7 @@ resource "aws_instance" "kali" {
     volume_size = var.kali_volume_size
   }
 
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-Kali" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name}-Kali" })
 }
 
 resource "aws_instance" "tools" {
@@ -255,10 +226,7 @@ resource "aws_instance" "tools" {
     volume_size = var.tools_volume_size
   }
 
-  tags = merge(
-    local.common_tags,
-    { Name = "${local.project_name}-Tools" }
-  )
+  tags = merge(local.common_tags, { Name = "${local.project_name}-Tools" })
 }
 
 # 6. Outputs
