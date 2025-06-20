@@ -1,6 +1,6 @@
-// main.tf
+//main.tf
 locals {
-  project_name = "aws-cybersecurity-homelab"
+  project_name = "Cyber Lab"
   common_tags  = { Project = local.project_name }
 }
 
