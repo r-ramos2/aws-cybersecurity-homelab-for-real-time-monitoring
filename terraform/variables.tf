@@ -1,4 +1,5 @@
 // variables.tf
+# Global settings
 variable "region" {
   description = "AWS region to deploy into"
   type        = string
@@ -7,8 +8,10 @@ variable "region" {
 variable "key_name_prefix" {
   description = "Prefix for the auto-generated SSH keypair"
   type        = string
-  default     = "lab-deployer"
+  default     = "devsecops-deployer"
 }
+
+# Networking
 variable "vpc_cidr_block" {
   description = "CIDR block for the primary VPC"
   type        = string
@@ -24,39 +27,66 @@ variable "availability_zone" {
   type        = string
   default     = "us-east-1a"
 }
-variable "allowed_cidr" {
-  description = "CIDR block permitted to reach instances (SSH/RDP/etc.)"
+variable "my_ip" {
+  description = "Your IP CIDR block for SSH access"
   type        = string
-  default     = "0.0.0.0/0"
+  default     = "203.0.113.0/32"
 }
-variable "windows_instance_type" {
-  description = "EC2 type for Windows server"
+
+# AMI Lookup
+variable "ami_name_filter" {
+  description = "Filter to find the latest Amazon Linux 2 AMI"
   type        = string
-  default     = "t3.small"
+  default     = "amzn2-ami-hvm-*-gp2"
 }
-variable "kali_instance_type" {
-  description = "EC2 type for Kali attacker VM"
+
+# EC2 Sizing
+variable "instance_type" {
+  description = "EC2 instance type for Jenkins server"
   type        = string
-  default     = "t3.small"
+  default     = "t2.large"
 }
-variable "tools_instance_type" {
-  description = "EC2 type for security tools server"
-  type        = string
-  default     = "t3.large"
-}
-variable "windows_volume_size" {
-  description = "Root EBS volume size for Windows (GB)"
-  type        = number
-  default     = 30
-}
-variable "kali_volume_size" {
-  description = "Root EBS volume size for Kali (GB)"
-  type        = number
-  default     = 12
-}
-variable "tools_volume_size" {
-  description = "Root EBS volume size for Tools server (GB)"
+variable "root_volume_size" {
+  description = "Root EBS volume size for Jenkins (GB)"
   type        = number
   default     = 30
 }
 
+# Ports
+variable "ssh_port" {
+  description = "SSH port"
+  type        = number
+  default     = 22
+}
+variable "http_port" {
+  description = "HTTP port for React App"
+  type        = number
+  default     = 80
+}
+variable "https_port" {
+  description = "HTTPS port for secure access"
+  type        = number
+  default     = 443
+}
+variable "jenkins_port" {
+  description = "Jenkins Web UI port"
+  type        = number
+  default     = 8080
+}
+variable "sonarqube_port" {
+  description = "SonarQube UI port"
+  type        = number
+  default     = 9000
+}
+variable "react_port" {
+  description = "React App port"
+  type        = number
+  default     = 3000
+}
+
+# Security
+variable "allowed_cidr" {
+  description = "CIDR block permitted to reach instances (SSH/HTTP/etc.)"
+  type        = string
+  default     = "0.0.0.0/0"
+}
