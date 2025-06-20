@@ -216,7 +216,7 @@ resource "aws_instance" "kali" {
   vpc_security_group_ids      = [aws_security_group.win_kali_sg.id]
   associate_public_ip_address = true
   key_name                    = aws_key_pair.deployer.key_name
-  user_data                   = file("${path.module}/kali_setup.sh")
+  user_data                   = file("${path.module}/../scripts/kali_setup.sh")
 
   root_block_device {
     volume_size = var.kali_volume_size
