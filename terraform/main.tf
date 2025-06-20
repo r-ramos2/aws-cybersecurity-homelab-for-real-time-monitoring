@@ -100,6 +100,7 @@ resource "aws_route_table_association" "public_assoc" {
 }
 
 # 4. Security Groups
+
 # Win/Kali Security Group
 resource "aws_security_group" "win_kali_sg" {
   name        = "win-kali-sg"
@@ -158,7 +159,7 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # Splunk Web UI (8000)
+  # Splunk Web UI
   ingress {
     from_port   = 8000
     to_port     = 8000
@@ -166,7 +167,7 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # Splunk Forwarder port (9997)
+  # Splunk Forwarder port
   ingress {
     from_port   = 9997
     to_port     = 9997
@@ -174,7 +175,7 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # Nessus UI (8834)
+  # Nessus UI
   ingress {
     from_port   = 8834
     to_port     = 8834
@@ -204,7 +205,6 @@ resource "aws_security_group" "tools_sg" {
   )
 }
 
-
 # 5. EC2 Instances
 resource "aws_instance" "windows" {
   ami                         = data.aws_ami.windows.id
@@ -213,8 +213,15 @@ resource "aws_instance" "windows" {
   vpc_security_group_ids      = [aws_security_group.win_kali_sg.id]
   associate_public_ip_address = true
   key_name                    = aws_key_pair.deployer.key_name
-  root_block_device { volume_size = var.windows_volume_size }
-  tags = merge(local.common_tags, { Name = "${local.project_name}-Windows" })
+
+  root_block_device {
+    volume_size = var.windows_volume_size
+  }
+
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name}-Windows" }
+  )
 }
 
 resource "aws_instance" "kali" {
@@ -225,8 +232,15 @@ resource "aws_instance" "kali" {
   associate_public_ip_address = true
   key_name                    = aws_key_pair.deployer.key_name
   user_data                   = file("${path.module}/kali_setup.sh")
-  root_block_device { volume_size = var.kali_volume_size }
-  tags = merge(local.common_tags, { Name = "${local.project_name}-Kali" })
+
+  root_block_device {
+    volume_size = var.kali_volume_size
+  }
+
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name}-Kali" }
+  )
 }
 
 resource "aws_instance" "tools" {
@@ -236,8 +250,15 @@ resource "aws_instance" "tools" {
   vpc_security_group_ids      = [aws_security_group.tools_sg.id]
   associate_public_ip_address = true
   key_name                    = aws_key_pair.deployer.key_name
-  root_block_device { volume_size = var.tools_volume_size }
-  tags = merge(local.common_tags, { Name = "${local.project_name}-Tools" })
+
+  root_block_device {
+    volume_size = var.tools_volume_size
+  }
+
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name}-Tools" }
+  )
 }
 
 # 6. Outputs
@@ -257,4 +278,3 @@ output "tools_public_ip" {
   description = "Public IP of the Tools server"
   value       = aws_instance.tools.public_ip
 }
-
