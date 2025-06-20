@@ -9,13 +9,16 @@ resource "tls_private_key" "deployer" {
   algorithm = "RSA"
   rsa_bits  = 4096
 }
+
 resource "random_id" "suffix" {
   byte_length = 4
 }
+
 resource "aws_key_pair" "deployer" {
   key_name   = "${var.key_name_prefix}-${random_id.suffix.hex}"
   public_key = tls_private_key.deployer.public_key_openssh
 }
+
 resource "local_file" "private_key_pem" {
   content         = tls_private_key.deployer.private_key_pem
   filename        = "${path.module}/deployer_key.pem"
@@ -26,6 +29,7 @@ resource "local_file" "private_key_pem" {
 data "aws_ami" "windows" {
   most_recent = true
   owners      = [var.windows_ami_owner]
+
   filter {
     name   = "name"
     values = [var.windows_ami_name_filter]
@@ -35,6 +39,7 @@ data "aws_ami" "windows" {
 data "aws_ami" "kali" {
   most_recent = true
   owners      = [var.kali_ami_owner]
+
   filter {
     name   = "name"
     values = [var.kali_ami_name_filter]
@@ -44,6 +49,7 @@ data "aws_ami" "kali" {
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = [var.ubuntu_ami_owner]
+
   filter {
     name   = "name"
     values = [var.ubuntu_ami_name_filter]
@@ -55,28 +61,49 @@ resource "aws_vpc" "lab" {
   cidr_block           = var.vpc_cidr_block
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags = merge(local.common_tags, { Name = "${local.project_name} VPC" })
+
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name} VPC" }
+  )
 }
+
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.lab.id
   cidr_block              = var.public_subnet_cidr
   availability_zone       = var.availability_zone
   map_public_ip_on_launch = true
-  tags = merge(local.common_tags, { Name = "${local.project_name} Public Subnet" })
+
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name} Public Subnet" }
+  )
 }
+
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.lab.id
-  tags   = merge(local.common_tags, { Name = "${local.project_name} IGW" })
+
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name} IGW" }
+  )
 }
+
 resource "aws_route_table" "rt" {
   vpc_id = aws_vpc.lab.id
-  tags   = merge(local.common_tags, { Name = "${local.project_name} RT" })
+
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name} RT" }
+  )
 }
+
 resource "aws_route" "default_route" {
   route_table_id         = aws_route_table.rt.id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.igw.id
 }
+
 resource "aws_route_table_association" "public_assoc" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.rt.id
@@ -122,7 +149,10 @@ resource "aws_security_group" "win_kali_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  tags = merge(local.common_tags, { Name = "${local.project_name} Win/Kali SG" })
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name} Win/Kali SG" }
+  )
 }
 
 # Tools Security Group
@@ -179,7 +209,10 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  tags = merge(local.common_tags, { Name = "${local.project_name} Tools SG" })
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name} Tools SG" }
+  )
 }
 
 # 5. EC2 Instances
@@ -195,7 +228,10 @@ resource "aws_instance" "windows" {
     volume_size = var.windows_volume_size
   }
 
-  tags = merge(local.common_tags, { Name = "${local.project_name}-Windows" })
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name}-Windows" }
+  )
 }
 
 resource "aws_instance" "kali" {
@@ -211,7 +247,10 @@ resource "aws_instance" "kali" {
     volume_size = var.kali_volume_size
   }
 
-  tags = merge(local.common_tags, { Name = "${local.project_name}-Kali" })
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name}-Kali" }
+  )
 }
 
 resource "aws_instance" "tools" {
@@ -226,7 +265,10 @@ resource "aws_instance" "tools" {
     volume_size = var.tools_volume_size
   }
 
-  tags = merge(local.common_tags, { Name = "${local.project_name}-Tools" })
+  tags = merge(
+    local.common_tags,
+    { Name = "${local.project_name}-Tools" }
+  )
 }
 
 # 6. Outputs
@@ -234,14 +276,17 @@ output "private_key_path" {
   description = "Local path to the generated SSH private key"
   value       = local_file.private_key_pem.filename
 }
+
 output "windows_public_ip" {
   description = "Public IP of the Windows server"
   value       = aws_instance.windows.public_ip
 }
+
 output "kali_public_ip" {
   description = "Public IP of the Kali server"
   value       = aws_instance.kali.public_ip
 }
+
 output "tools_public_ip" {
   description = "Public IP of the Tools server"
   value       = aws_instance.tools.public_ip
