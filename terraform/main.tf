@@ -190,7 +190,7 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  tags = merge(local.common_tags, { Name = "${local.project_name} Tools SG" })
+  tags = merge(local.common_tags, { Name = "${local.project_name}-tools-sg" })
 }
 
 # 5. EC2 Instances
@@ -206,7 +206,7 @@ resource "aws_instance" "windows" {
     volume_size = var.windows_volume_size
   }
 
-  tags = merge(local.common_tags, { Name = "${local.project_name}-Windows" })
+  tags = merge(local.common_tags, { Name = "${local.project_name}-windows" })
 }
 
 resource "aws_instance" "kali" {
@@ -222,7 +222,7 @@ resource "aws_instance" "kali" {
     volume_size = var.kali_volume_size
   }
 
-  tags = merge(local.common_tags, { Name = "${local.project_name}-Kali" })
+  tags = merge(local.common_tags, { Name = "${local.project_name}-kali" })
 }
 
 resource "aws_instance" "tools" {
@@ -237,7 +237,7 @@ resource "aws_instance" "tools" {
     volume_size = var.tools_volume_size
   }
 
-  tags = merge(local.common_tags, { Name = "${local.project_name}-Tools" })
+  tags = merge(local.common_tags, { Name = "${local.project_name}-tools" })
 }
 
 # 6. Outputs
