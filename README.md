@@ -1,4 +1,4 @@
-# Scalable AWS Cybersecurity Lab for Real-Time Monitoring and Vulnerability Management
+# AWS Security Homelab for Real-time Monitoring and Vulnerability Management
 
 [![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5.0-blue)](https://www.terraform.io/)
 
