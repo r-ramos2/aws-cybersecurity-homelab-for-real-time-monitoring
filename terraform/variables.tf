@@ -1,14 +1,20 @@
-// variables.tf
-# Global settings
 variable "region" {
   description = "AWS region to deploy into"
   type        = string
   default     = "us-east-1"
 }
+
 variable "key_name_prefix" {
   description = "Prefix for the auto-generated SSH keypair"
   type        = string
   default     = "cyberlab-deployer"
+}
+
+# Public key path: point this to a locally-generated public key file (e.g. /home/you/.ssh/cyberlab_deployer.pub)
+variable "public_key_path" {
+  description = "Path to the local SSH public key file to upload to AWS (use absolute path)"
+  type        = string
+  default     = "/home/youruser/.ssh/cyberlab_deployer.pub"
 }
 
 # Networking
@@ -17,11 +23,13 @@ variable "vpc_cidr_block" {
   type        = string
   default     = "10.0.0.0/16"
 }
+
 variable "public_subnet_cidr" {
   description = "CIDR block for the public subnet"
   type        = string
   default     = "10.0.1.0/24"
 }
+
 variable "availability_zone" {
   description = "AZ for the public subnet"
   type        = string
@@ -62,9 +70,9 @@ variable "ubuntu_ami_name_filter" {
 
 # Security
 variable "allowed_cidr" {
-  description = "CIDR block permitted to reach instances"
+  description = "CIDR block permitted to reach instances. DO NOT use 0.0.0.0/0 for management ports."
   type        = string
-  default     = "0.0.0.0/0"
+  default     = "203.0.113.4/32"
 }
 
 # Ports
@@ -98,7 +106,7 @@ variable "nessus_port" {
 variable "windows_instance_type" {
   description = "EC2 type for Windows server"
   type        = string
-  default     = "t3.small"
+  default     = "t3.medium"
 }
 variable "kali_instance_type" {
   description = "EC2 type for Kali attacker VM"
