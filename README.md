@@ -184,10 +184,10 @@ terraform destroy -auto-approve
 
 ## Best Practices
 
-* Least-privilege IAM
-* Restrict SG ingress to your CIDR
-* Rotate SSH keys regularly
-* Enable CloudTrail & CloudWatch alerts
+* Use least-privilege IAM.
+* Restrict SG ingress to your CIDR.
+* Rotate SSH keys regularly.
+* Enable CloudTrail and CloudWatch alerts.
 
 ---
 
@@ -207,10 +207,10 @@ This design choice balances **security awareness** with **budget constraints**, 
 
 ## Next Steps & Enhancements
 
-* Modularize Terraform
-* Remote state (S3 + DynamoDB)
-* Integrate Ansible
-* Add IDS/IPS (Suricata, Zeek)
+* Modularize Terraform.
+* Remote state (S3 + DynamoDB).
+* Integrate Ansible.
+* Add IDS/IPS (Suricata, Zeek).
 
 ---
 
