@@ -25,8 +25,9 @@ All infrastructure defined in Terraform for reproducibility, security, and scala
 7. [Tool Installation & Configuration](#tool-installation--configuration)
 8. [Cleanup](#cleanup)
 9. [Best Practices](#best-practices)
-10. [Next Steps & Enhancements](#next-steps--enhancements)
-11. [Resources](#resources)
+10. [Security Considerations](#security-considerations)
+11. [Next Steps & Enhancements](#next-steps--enhancements)
+12. [Resources](#resources)
 
 ---
 
@@ -98,12 +99,13 @@ cd scalable-aws-cybersecurity-lab-for-real-time-monitoring-and-vulnerability-man
 ```bash
 ssh-keygen -t rsa -b 4096 -f ~/.ssh/cyberlab_deployer -N ""
 ```
+⚠️ Important: Update `allowed_cidr` with your current public IP (with `/32` mask) before applying.
 
 Then set absolute path to the public key in `terraform.tfvars`:
 
 ```ini
 public_key_path = "/home/youruser/.ssh/cyberlab_deployer.pub"
-allowed_cidr    = "203.0.113.4/32"  # replace with your management IP/CIDR
+allowed_cidr    = "203.0.113.25/32" # your home IP
 ```
 
 ### 3. Configure AWS & Terraform
@@ -186,6 +188,20 @@ terraform destroy -auto-approve
 * Restrict SG ingress to your CIDR
 * Rotate SSH keys regularly
 * Enable CloudTrail & CloudWatch alerts
+
+---
+
+### Security Considerations
+
+For cost efficiency, this lab uses a single public subnet. All instances are restricted by Security Groups to accept connections **only from the administrator’s IP (no 0.0.0.0/0 exposure)**.  
+
+In a production or enterprise environment, best practice would be to:
+- Place sensitive systems (Splunk, Nessus, Windows) in **private subnets**.
+- Use a **NAT Gateway** for outbound updates.
+- Provide access via a **VPN or bastion host**, not public IPs.
+
+This design choice balances **security awareness** with **budget constraints**, while still demonstrating real-world monitoring and attack/defense workflows.
+
 
 ---
 
