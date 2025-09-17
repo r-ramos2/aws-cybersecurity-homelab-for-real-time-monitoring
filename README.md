@@ -109,10 +109,10 @@ allowed_cidr    = "203.0.113.4/32"  # replace with your management IP/CIDR
 ### 3. Configure AWS & Terraform
 
 ```bash
-aws configure
 terraform init
-terraform plan -out=lab.plan
-terraform apply lab.plan
+terraform validate
+terraform plan -out=plan.tf
+terraform apply plan.tf
 ```
 
 On success you’ll see outputs for key name and public IPs.
