@@ -2,19 +2,24 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-# Minimal install of XFCE and XRDP for Kali
+echo "[INFO] Updating system..."
 apt-get update && apt-get -y full-upgrade
-apt-get -y install --no-install-recommends kali-desktop-xfce xorg xrdp
 
-# Ensure xrdp runs
-systemctl enable --now xrdp
-
-# Harden basic XRDP config (disable clipboard redirection as an example)
-XRDP_CFG="/etc/xrdp/xrdp.ini"
-if [ -f "$XRDP_CFG" ]; then
-  # Conservative edit; adapt as needed for your environment.
-  sed -i 's/clipboard=1/clipboard=0/g' "$XRDP_CFG" || true
-  systemctl restart xrdp
+echo "[INFO] Installing XFCE and XRDP..."
+if ! dpkg -l | grep -q xfce4; then
+    apt-get -y install --no-install-recommends kali-desktop-xfce xorg xfce4 xrdp
+else
+    echo "[INFO] XFCE already installed."
 fi
 
-echo "[INFO] Kali setup complete. XRDP enabled."
+echo "[INFO] Enabling XRDP service..."
+systemctl enable --now xrdp
+
+# Harden XRDP config (disable clipboard redirection)
+XRDP_CFG="/etc/xrdp/xrdp.ini"
+if [ -f "$XRDP_CFG" ]; then
+    sed -i 's/clipboard=1/clipboard=0/g' "$XRDP_CFG" || true
+    systemctl restart xrdp
+fi
+
+echo "[INFO] Kali setup complete. XRDP running on TCP port 3389."
