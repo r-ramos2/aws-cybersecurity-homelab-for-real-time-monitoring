@@ -70,7 +70,7 @@ variable "ubuntu_ami_name_filter" {
 
 # Security
 variable "allowed_cidr" {
-  description = "CIDR block permitted to reach instances. DO NOT use 0.0.0.0/0 for management ports."
+  description = "CIDR block permitted to reach instances"
   type        = string
   default     = "203.0.113.4/32"
 }
