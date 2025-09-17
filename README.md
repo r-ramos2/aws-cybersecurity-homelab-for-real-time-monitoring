@@ -73,7 +73,6 @@ Single public VPC containing three EC2 hosts in a public subnet, each secured by
 ├── scripts/              # Post-launch scripts
 │   ├── kali_setup.sh     # Kali user_data script
 │   ├── nessus_install.sh
-│   ├── rdp.sh
 │   └── splunk_inputs.conf
 ├── terraform/            # Terraform config
 │   ├── provider.tf
