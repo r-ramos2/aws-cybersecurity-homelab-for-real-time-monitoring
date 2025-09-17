@@ -1,31 +1,19 @@
-// main.tf
 locals {
   project_name = "aws-cybersecurity-lab"
   common_tags  = { Project = local.project_name }
-}
-
-# 1. SSH Keypair
-resource "tls_private_key" "deployer" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
 }
 
 resource "random_id" "suffix" {
   byte_length = 4
 }
 
+# Keypair: upload an existing public key file using public_key_path variable
 resource "aws_key_pair" "deployer" {
   key_name   = "${var.key_name_prefix}-${random_id.suffix.hex}"
-  public_key = tls_private_key.deployer.public_key_openssh
+  public_key = file(var.public_key_path)
 }
 
-resource "local_file" "private_key_pem" {
-  content         = tls_private_key.deployer.private_key_pem
-  filename        = "${path.module}/deployer_key.pem"
-  file_permission = "0400"
-}
-
-# 2. AMI Data Sources
+# 1. AMI Data Sources
 data "aws_ami" "windows" {
   most_recent = true
   owners      = [var.windows_ami_owner]
@@ -56,7 +44,7 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# 3. Networking: VPC, Subnet, IGW, Routing
+# Networking: VPC, Subnet, IGW, Routing
 resource "aws_vpc" "lab" {
   cidr_block           = var.vpc_cidr_block
   enable_dns_support   = true
@@ -93,15 +81,12 @@ resource "aws_route_table_association" "public_assoc" {
   route_table_id = aws_route_table.rt.id
 }
 
-# 4. Security Groups
-
-# Win/Kali Security Group
+# Security Groups
 resource "aws_security_group" "win_kali_sg" {
   name        = "win-kali-sg"
   description = "Allow SSH, RDP, and ICMP from ${var.allowed_cidr}"
   vpc_id      = aws_vpc.lab.id
 
-  # SSH for Win/Kali management
   ingress {
     from_port   = var.ssh_port
     to_port     = var.ssh_port
@@ -109,7 +94,6 @@ resource "aws_security_group" "win_kali_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # RDP to Windows server
   ingress {
     from_port   = var.rdp_port
     to_port     = var.rdp_port
@@ -117,7 +101,6 @@ resource "aws_security_group" "win_kali_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # ICMP (ping/traceroute)
   ingress {
     from_port   = -1
     to_port     = -1
@@ -125,24 +108,21 @@ resource "aws_security_group" "win_kali_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # Allow all outbound
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.allowed_cidr]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = merge(local.common_tags, { Name = "${local.project_name}-win-kali-sg" })
 }
 
-# Tools Security Group
 resource "aws_security_group" "tools_sg" {
   name        = "tools-sg"
   description = "Allow Splunk, Nessus, SSH & ICMP from ${var.allowed_cidr}"
   vpc_id      = aws_vpc.lab.id
 
-  # SSH for Tools box management
   ingress {
     from_port   = var.ssh_port
     to_port     = var.ssh_port
@@ -150,7 +130,6 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # Splunk Web UI
   ingress {
     from_port   = var.splunk_web_port
     to_port     = var.splunk_web_port
@@ -158,7 +137,6 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # Splunk Forwarder port
   ingress {
     from_port   = var.splunk_forwarder_port
     to_port     = var.splunk_forwarder_port
@@ -166,7 +144,6 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # Nessus UI
   ingress {
     from_port   = var.nessus_port
     to_port     = var.nessus_port
@@ -174,7 +151,6 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # ICMP (ping/traceroute)
   ingress {
     from_port   = -1
     to_port     = -1
@@ -182,18 +158,17 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # Allow all outbound
   egress {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = [var.allowed_cidr]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = merge(local.common_tags, { Name = "${local.project_name}-tools-sg" })
 }
 
-# 5. EC2 Instances
+# EC2 Instances
 resource "aws_instance" "windows" {
   ami                         = data.aws_ami.windows.id
   instance_type               = var.windows_instance_type
@@ -217,7 +192,6 @@ resource "aws_instance" "kali" {
   associate_public_ip_address = true
   key_name                    = aws_key_pair.deployer.key_name
 
-  # Bootstrap via external script
   user_data                   = file("${path.module}/../scripts/kali_setup.sh")
 
   root_block_device {
@@ -240,25 +214,4 @@ resource "aws_instance" "tools" {
   }
 
   tags = merge(local.common_tags, { Name = "${local.project_name}-tools" })
-}
-
-# 6. Outputs
-output "private_key_path" {
-  description = "Local path to the generated SSH private key"
-  value       = local_file.private_key_pem.filename
-}
-
-output "windows_public_ip" {
-  description = "Public IP of the Windows server"
-  value       = aws_instance.windows.public_ip
-}
-
-output "kali_public_ip" {
-  description = "Public IP of the Kali server"
-  value       = aws_instance.kali.public_ip
-}
-
-output "tools_public_ip" {
-  description = "Public IP of the Tools server"
-  value       = aws_instance.tools.public_ip
 }
