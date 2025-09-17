@@ -216,7 +216,7 @@ This design choice balances **security awareness** with **budget constraints**, 
 
 ## Resources
 
-* AWS: [https://aws.amazon.com/documentation/](https://aws.amazon.com/documentation/)
+* AWS Docs: [https://aws.amazon.com/documentation/](https://aws.amazon.com/documentation/)
 * Terraform: [https://www.terraform.io/docs](https://www.terraform.io/docs)
 * Splunk: [https://docs.splunk.com/](https://docs.splunk.com/)
 * Nessus: [https://docs.tenable.com/nessus/](https://docs.tenable.com/nessus/)
