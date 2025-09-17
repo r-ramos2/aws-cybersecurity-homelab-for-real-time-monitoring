@@ -50,9 +50,9 @@ Single public VPC containing three EC2 hosts in a public subnet, each secured by
   * **Tools SG**: SSH (22), Splunk (8000/9997), Nessus (8834), ICMP
 * **EC2 Instances**
 
-  1. **windows**: Windows Server 2019 (t3.medium)
-  2. **kali**: Kali Linux (t3.small)
-  3. **tools**: Ubuntu 20.04 (t3.large)
+  * **windows**: Windows Server 2019 (t3.medium)
+  * **kali**: Kali Linux (t3.small)
+  * **tools**: Ubuntu 20.04 (t3.large)
 
 ---
 
