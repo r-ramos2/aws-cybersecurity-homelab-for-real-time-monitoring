@@ -4,11 +4,6 @@ output "private_key_path" {
   sensitive   = true
 }
 
-output "deployer_key_name" {
-  description = "Name of the key pair uploaded to AWS"
-  value       = aws_key_pair.deployer.key_name
-}
-
 output "kali_public_ip" {
   description = "Public IP of the Kali Linux instance"
   value       = aws_instance.kali.public_ip
