@@ -36,26 +36,31 @@ variable "windows_ami_owner" {
   type        = string
   default     = "amazon"
 }
+
 variable "windows_ami_name_filter" {
   description = "Filter for Windows AMI"
   type        = string
   default     = "Windows_Server-2019-English-Full-Base-*"
 }
+
 variable "kali_ami_owner" {
   description = "Owner ID for Kali AMI"
   type        = string
   default     = "679593333241"
 }
+
 variable "kali_ami_name_filter" {
   description = "Filter for Kali AMI"
   type        = string
   default     = "kali-*-amd64-*-*"
 }
+
 variable "ubuntu_ami_owner" {
   description = "Owner ID for Ubuntu AMI"
   type        = string
   default     = "099720109477"
 }
+
 variable "ubuntu_ami_name_filter" {
   description = "Filter for Ubuntu AMI"
   type        = string
@@ -66,7 +71,7 @@ variable "ubuntu_ami_name_filter" {
 variable "allowed_cidr" {
   description = "CIDR block permitted to reach instances"
   type        = string
-  default     = "203.0.113.4/32" # your home IP
+  default     = "203.0.113.4/32"
 }
 
 # Ports
@@ -75,21 +80,25 @@ variable "ssh_port" {
   type        = number
   default     = 22
 }
+
 variable "rdp_port" {
   description = "RDP port for Windows"
   type        = number
   default     = 3389
 }
+
 variable "splunk_web_port" {
   description = "Splunk Web UI port"
   type        = number
   default     = 8000
 }
+
 variable "splunk_forwarder_port" {
   description = "Splunk Forwarder port"
   type        = number
   default     = 9997
 }
+
 variable "nessus_port" {
   description = "Nessus UI port"
   type        = number
@@ -102,11 +111,13 @@ variable "windows_instance_type" {
   type        = string
   default     = "t3.medium"
 }
+
 variable "kali_instance_type" {
   description = "EC2 type for Kali attacker VM"
   type        = string
   default     = "t3.small"
 }
+
 variable "tools_instance_type" {
   description = "EC2 type for security tools server"
   type        = string
@@ -119,11 +130,13 @@ variable "windows_volume_size" {
   type        = number
   default     = 30
 }
+
 variable "kali_volume_size" {
   description = "Root EBS volume size for Kali"
   type        = number
   default     = 12
 }
+
 variable "tools_volume_size" {
   description = "Root EBS volume size for Tools server"
   type        = number
