@@ -10,9 +10,9 @@ allowed_cidr = "203.0.113.25/32"
 # tools_instance_type   = "t3.large"
 
 # Root volume sizes (GB)
-# windows_volume_size = 30
-# kali_volume_size    = 12
-# tools_volume_size   = 30
+# windows_volume_size   = 30
+# kali_volume_size      = 12
+# tools_volume_size     = 30
 
 # Ports
 # ssh_port              = 22
