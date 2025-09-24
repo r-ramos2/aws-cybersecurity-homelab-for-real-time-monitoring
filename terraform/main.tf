@@ -181,7 +181,7 @@ resource "aws_security_group" "tools_sg" {
   tags = merge(local.common_tags, { Name = "${local.project_name}-tools-sg" })
 }
 
-# 5. EC2 Instances (Windows, Kali, Ubuntu)
+# 5. EC2 Instances (Windows, Kali, Tools)
 resource "aws_instance" "windows" {
   ami                         = data.aws_ami.windows.id
   instance_type               = var.windows_instance_type
