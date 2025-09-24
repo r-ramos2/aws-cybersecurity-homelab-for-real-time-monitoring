@@ -1,3 +1,4 @@
+# Global settings
 variable "region" {
   description = "AWS region to deploy into"
   type        = string
@@ -8,13 +9,6 @@ variable "key_name_prefix" {
   description = "Prefix for the auto-generated SSH keypair"
   type        = string
   default     = "cyberlab-deployer"
-}
-
-# Public key path: point this to a locally-generated public key file (e.g. /home/you/.ssh/cyberlab_deployer.pub)
-variable "public_key_path" {
-  description = "Path to the local SSH public key file to upload to AWS (use absolute path)"
-  type        = string
-  default     = "/home/youruser/.ssh/cyberlab_deployer.pub"
 }
 
 # Networking
@@ -72,7 +66,7 @@ variable "ubuntu_ami_name_filter" {
 variable "allowed_cidr" {
   description = "CIDR block permitted to reach instances"
   type        = string
-  default     = "203.0.113.4/32"
+  default     = "203.0.113.4/32" # your home IP
 }
 
 # Ports
