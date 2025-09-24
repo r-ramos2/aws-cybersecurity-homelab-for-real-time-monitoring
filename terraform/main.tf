@@ -3,17 +3,30 @@ locals {
   common_tags  = { Project = local.project_name }
 }
 
+# 1. SSH Keypair
+resource "tls_private_key" "deployer" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
 resource "random_id" "suffix" {
   byte_length = 4
 }
 
-# Keypair: upload an existing public key file using public_key_path variable
+# Register generated keypair in AWS
 resource "aws_key_pair" "deployer" {
   key_name   = "${var.key_name_prefix}-${random_id.suffix.hex}"
-  public_key = file(var.public_key_path)
+  public_key = tls_private_key.deployer.public_key_openssh
 }
 
-# 1. AMI Data Sources
+# Save private key locally (chmod 400)
+resource "local_file" "private_key_pem" {
+  content         = tls_private_key.deployer.private_key_pem
+  filename        = "${path.module}/deployer_key.pem"
+  file_permission = "0400"
+}
+
+# 2. AMI Data Sources
 data "aws_ami" "windows" {
   most_recent = true
   owners      = [var.windows_ami_owner]
@@ -44,7 +57,7 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# Networking: VPC, Subnet, IGW, Routing
+# 3. Networking: VPC, Subnet, IGW, Routing
 resource "aws_vpc" "lab" {
   cidr_block           = var.vpc_cidr_block
   enable_dns_support   = true
@@ -81,7 +94,7 @@ resource "aws_route_table_association" "public_assoc" {
   route_table_id = aws_route_table.rt.id
 }
 
-# Security Groups
+# 4. Security Groups
 resource "aws_security_group" "win_kali_sg" {
   name        = "win-kali-sg"
   description = "Allow SSH, RDP, and ICMP from ${var.allowed_cidr}"
@@ -168,7 +181,7 @@ resource "aws_security_group" "tools_sg" {
   tags = merge(local.common_tags, { Name = "${local.project_name}-tools-sg" })
 }
 
-# EC2 Instances
+# 5. EC2 Instances (Windows, Kali, Ubuntu)
 resource "aws_instance" "windows" {
   ami                         = data.aws_ami.windows.id
   instance_type               = var.windows_instance_type
