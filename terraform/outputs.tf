@@ -1,7 +1,14 @@
+# SSH Key
 output "private_key_path" {
   description = "Path to the generated SSH private key"
   value       = local_file.private_key_pem.filename
   sensitive   = true
+}
+
+# EC2 Public IPs
+output "windows_public_ip" {
+  description = "Public IP of the Windows Server instance"
+  value       = aws_instance.windows.public_ip
 }
 
 output "kali_public_ip" {
@@ -9,16 +16,12 @@ output "kali_public_ip" {
   value       = aws_instance.kali.public_ip
 }
 
-output "windows_public_ip" {
-  description = "Public IP of the Windows Server instance"
-  value       = aws_instance.windows.public_ip
-}
-
 output "tools_public_ip" {
   description = "Public IP of the Security Tools (Ubuntu) instance"
   value       = aws_instance.tools.public_ip
 }
 
+# Service URLs on Tools server
 output "splunk_url" {
   description = "Splunk Web UI URL"
   value       = "http://${aws_instance.tools.public_ip}:${var.splunk_web_port}"
