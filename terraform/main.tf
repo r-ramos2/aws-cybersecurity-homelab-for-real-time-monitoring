@@ -13,13 +13,11 @@ resource "random_id" "suffix" {
   byte_length = 4
 }
 
-# Register generated keypair in AWS
 resource "aws_key_pair" "deployer" {
   key_name   = "${var.key_name_prefix}-${random_id.suffix.hex}"
   public_key = tls_private_key.deployer.public_key_openssh
 }
 
-# Save private key locally (chmod 400)
 resource "local_file" "private_key_pem" {
   content         = tls_private_key.deployer.private_key_pem
   filename        = "${path.module}/deployer_key.pem"
@@ -57,7 +55,7 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# 3. Networking: VPC, Subnet, IGW, Routing
+# 3. Networking
 resource "aws_vpc" "lab" {
   cidr_block           = var.vpc_cidr_block
   enable_dns_support   = true
@@ -181,7 +179,7 @@ resource "aws_security_group" "tools_sg" {
   tags = merge(local.common_tags, { Name = "${local.project_name}-tools-sg" })
 }
 
-# 5. EC2 Instances (Windows, Kali, Tools)
+# 5. EC2 Instances
 resource "aws_instance" "windows" {
   ami                         = data.aws_ami.windows.id
   instance_type               = var.windows_instance_type
@@ -205,7 +203,7 @@ resource "aws_instance" "kali" {
   associate_public_ip_address = true
   key_name                    = aws_key_pair.deployer.key_name
 
-  user_data                   = file("${path.module}/../scripts/kali_setup.sh")
+  user_data = file("${path.module}/../scripts/kali_setup.sh")
 
   root_block_device {
     volume_size = var.kali_volume_size
