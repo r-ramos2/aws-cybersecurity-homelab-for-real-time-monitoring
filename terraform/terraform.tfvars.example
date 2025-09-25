@@ -1,7 +1,7 @@
 # Required: replace with your current public IP (with /32 CIDR mask)
 allowed_cidr            = "203.0.113.25/32"
 
-# Optional overrides (uncomment and edit if needed)
+# Optional: override defaults (uncomment and edit if needed)
 # region                = "us-east-1"
 
 # EC2 instance types
