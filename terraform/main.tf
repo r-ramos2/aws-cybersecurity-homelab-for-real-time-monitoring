@@ -193,6 +193,7 @@ resource "aws_instance" "kali" {
     volume_size = var.kali_volume_size
   }
 
+  # Request Spot instance
   instance_interruption_behaviour = "terminate"   # Spot termination behavior
   spot_instance_request {
     max_price = ""  # leave empty for current Spot market price
@@ -213,6 +214,7 @@ resource "aws_instance" "windows" {
     volume_size = var.windows_volume_size
   }
 
+  # Request Spot instance
   instance_interruption_behaviour = "terminate"
   spot_instance_request {
     max_price = ""  
