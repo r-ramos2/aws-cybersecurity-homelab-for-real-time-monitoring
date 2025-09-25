@@ -69,9 +69,13 @@ variable "ubuntu_ami_name_filter" {
 
 # Security
 variable "allowed_cidr" {
-  description = "CIDR block permitted to reach instances"
+  description = "CIDR block permitted to reach instances (replace with your public IP /32)"
   type        = string
-  default     = "203.0.113.4/32"
+
+  validation {
+    condition     = can(cidrhost(var.allowed_cidr, 0))
+    error_message = "allowed_cidr must be a valid IPv4 CIDR block, e.g. 203.0.113.25/32"
+  }
 }
 
 # Ports
