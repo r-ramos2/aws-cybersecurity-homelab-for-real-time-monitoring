@@ -180,21 +180,6 @@ resource "aws_security_group" "tools_sg" {
 }
 
 # 5. EC2 Instances
-resource "aws_instance" "windows" {
-  ami                         = data.aws_ami.windows.id
-  instance_type               = var.windows_instance_type
-  subnet_id                   = aws_subnet.public.id
-  vpc_security_group_ids      = [aws_security_group.win_kali_sg.id]
-  associate_public_ip_address = true
-  key_name                    = aws_key_pair.deployer.key_name
-
-  root_block_device {
-    volume_size = var.windows_volume_size
-  }
-
-  tags = merge(local.common_tags, { Name = "${local.project_name}-windows" })
-}
-
 resource "aws_instance" "kali" {
   ami                         = data.aws_ami.kali.id
   instance_type               = var.kali_instance_type
@@ -209,6 +194,21 @@ resource "aws_instance" "kali" {
   }
 
   tags = merge(local.common_tags, { Name = "${local.project_name}-kali" })
+}
+
+resource "aws_instance" "windows" {
+  ami                         = data.aws_ami.windows.id
+  instance_type               = var.windows_instance_type
+  subnet_id                   = aws_subnet.public.id
+  vpc_security_group_ids      = [aws_security_group.win_kali_sg.id]
+  associate_public_ip_address = true
+  key_name                    = aws_key_pair.deployer.key_name
+
+  root_block_device {
+    volume_size = var.windows_volume_size
+  }
+
+  tags = merge(local.common_tags, { Name = "${local.project_name}-windows" })
 }
 
 resource "aws_instance" "tools" {
