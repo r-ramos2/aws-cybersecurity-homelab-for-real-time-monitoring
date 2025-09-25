@@ -196,7 +196,7 @@ resource "aws_instance" "kali" {
   # Request Spot instance
   instance_interruption_behaviour = "terminate"   # Spot termination behavior
   spot_instance_request {
-    max_price = ""  # leave empty for current Spot market price
+    max_price = ""  # 0.05 or leave empty for current Spot market price
   }
 
   tags = merge(local.common_tags, { Name = "${local.project_name}-kali" })
