@@ -55,7 +55,7 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# 3. Networking
+# 3. Networking: VPC, Subnet, IGW, Routing
 resource "aws_vpc" "lab" {
   cidr_block           = var.vpc_cidr_block
   enable_dns_support   = true
