@@ -193,6 +193,11 @@ resource "aws_instance" "kali" {
     volume_size = var.kali_volume_size
   }
 
+  instance_interruption_behaviour = "terminate"   # Spot termination behavior
+  spot_instance_request {
+    max_price = ""  # leave empty for current Spot market price
+  }
+
   tags = merge(local.common_tags, { Name = "${local.project_name}-kali" })
 }
 
@@ -206,6 +211,11 @@ resource "aws_instance" "windows" {
 
   root_block_device {
     volume_size = var.windows_volume_size
+  }
+
+  instance_interruption_behaviour = "terminate"
+  spot_instance_request {
+    max_price = ""  
   }
 
   tags = merge(local.common_tags, { Name = "${local.project_name}-windows" })
@@ -222,6 +232,9 @@ resource "aws_instance" "tools" {
   root_block_device {
     volume_size = var.tools_volume_size
   }
+
+  # Keep Tools on-demand for reliability
+  # Remove spot_instance_request block
 
   tags = merge(local.common_tags, { Name = "${local.project_name}-tools" })
 }
