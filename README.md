@@ -94,18 +94,12 @@ git clone https://github.com/r-ramos2/scalable-aws-cybersecurity-lab-for-real-ti
 cd scalable-aws-cybersecurity-lab-for-real-time-monitoring-and-vulnerability-management/terraform
 ```
 
-### 2. Generate SSH key locally
+### 2. Configure allowed CIDR
 
-```bash
-ssh-keygen -t rsa -b 4096 -f ~/.ssh/cyberlab_deployer -N ""
-```
-⚠️ Important: Update `allowed_cidr` with your current public IP (with `/32` mask) before applying.
-
-Then set absolute path to the public key in `terraform.tfvars`:
+Before applying Terraform, set your current public IP in `terraform.tfvars`:
 
 ```ini
-public_key_path = "/home/youruser/.ssh/cyberlab_deployer.pub"
-allowed_cidr    = "203.0.113.25/32" # your home IP
+allowed_cidr = "203.0.113.25/32" # your home IP
 ```
 
 ### 3. Configure AWS & Terraform
@@ -126,7 +120,7 @@ On success you’ll see outputs for key name and public IPs.
 ### Kali Linux
 
 ```bash
-ssh -i ~/.ssh/cyberlab_deployer kali@<KALI_PUBLIC_IP>
+ssh -i ../terraform/deployer_key.pem kali@<KALI_PUBLIC_IP>
 ```
 
 Kali is configured via `scripts/kali_setup.sh` (XFCE desktop + XRDP).
@@ -139,7 +133,7 @@ Kali is configured via `scripts/kali_setup.sh` (XFCE desktop + XRDP).
 ### Security Tools Box (Ubuntu)
 
 ```bash
-ssh -i ~/.ssh/cyberlab_deployer ubuntu@<TOOLS_PUBLIC_IP>
+ssh -i ../terraform/deployer_key.pem ubuntu@<TOOLS_PUBLIC_IP>
 ```
 
 To install Nessus:
