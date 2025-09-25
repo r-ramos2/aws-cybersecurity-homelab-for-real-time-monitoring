@@ -189,13 +189,19 @@ resource "aws_instance" "kali" {
   key_name                    = aws_key_pair.deployer.key_name
   user_data                   = file("${path.module}/../scripts/kali_setup.sh")
 
-  root_block_device {
-    volume_size = var.kali_volume_size
-  }
+root_block_device {
+  volume_size = var.kali_volume_size
+}
 
-  instance_interruption_behaviour = "terminate"   # Spot termination behavior
-  spot_instance_request {
-    max_price = ""  # leave empty for current Spot market price
+  # Spot instance configuration
+  instance_market_options {
+    market_type = "spot"
+
+    spot_options {
+      allocation_strategy            = "capacity-optimized"
+      instance_interruption_behavior = "terminate"
+      # max_price = null  # optional: leave blank to pay current Spot price
+    }
   }
 
   tags = merge(local.common_tags, { Name = "${local.project_name}-kali" })
@@ -213,13 +219,20 @@ resource "aws_instance" "windows" {
     volume_size = var.windows_volume_size
   }
 
-  instance_interruption_behaviour = "terminate"
-  spot_instance_request {
-    max_price = ""  
+  # Spot instance configuration
+  instance_market_options {
+    market_type = "spot"
+
+    spot_options {
+      allocation_strategy            = "capacity-optimized"
+      instance_interruption_behavior = "terminate"
+      # max_price = null  # optional: leave blank to pay current Spot price
+    }
   }
 
   tags = merge(local.common_tags, { Name = "${local.project_name}-windows" })
 }
+
 
 resource "aws_instance" "tools" {
   ami                         = data.aws_ami.ubuntu.id
