@@ -67,9 +67,9 @@ variable "ubuntu_ami_name_filter" {
   default     = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"
 }
 
-# Security
+# Allowed CIDR for access (replace with your public IP /32)
 variable "allowed_cidr" {
-  description = "CIDR block permitted to reach instances (replace with your public IP /32)"
+  description = "CIDR block permitted to reach instances (e.g. 203.0.113.25/32)"
   type        = string
 
   validation {
