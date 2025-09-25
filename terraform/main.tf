@@ -1,5 +1,5 @@
 locals {
-  project_name = "aws-cybersecurity-lab"
+  project_name = "aws-cybersecurity-homelab"
   common_tags  = { Project = local.project_name }
 }
 
