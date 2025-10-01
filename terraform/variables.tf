@@ -111,19 +111,19 @@ variable "nessus_port" {
 
 # EC2 Sizing
 variable "windows_instance_type" {
-  description = "EC2 type for Windows server"
+  description = "EC2 instance type for Windows server"
   type        = string
   default     = "t3.medium"
 }
 
 variable "kali_instance_type" {
-  description = "EC2 type for Kali attacker VM"
+  description = "EC2 instance type for Kali attacker VM"
   type        = string
   default     = "t3.small"
 }
 
 variable "tools_instance_type" {
-  description = "EC2 type for security tools server"
+  description = "EC2 instance type for security tools server"
   type        = string
   default     = "t3.large"
 }
