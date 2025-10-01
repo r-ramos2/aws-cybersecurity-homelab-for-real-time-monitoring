@@ -29,7 +29,7 @@ terraform apply -auto-approve
 # 5. Access security tools
 # Splunk:  http://$(terraform output -raw tools_public_ip):8000
 # Nessus:  https://$(terraform output -raw tools_public_ip):8834
-```
+````
 
 ---
 
@@ -110,6 +110,7 @@ terraform apply plan.tfplan
 ```
 
 Outputs:
+
 * SSH private key location
 * Public IPs for all instances
 * Pre-formatted SSH and RDP commands
@@ -146,6 +147,15 @@ xfreerdp /u:kali /v:$(terraform output -raw kali_public_ip):3389 /cert:ignore
 # Password: kali
 ```
 
+> **Note on Clipboard:** Clipboard redirection is disabled by default for security. If you need clipboard access between your local machine and Kali, SSH to the instance and run:
+>
+> ```bash
+> sudo sed -i 's/clipboard=0/clipboard=1/g' /etc/xrdp/xrdp.ini
+> sudo systemctl restart xrdp
+> ```
+>
+> Then reconnect via RDP.
+
 **Verification:**
 
 ```bash
@@ -159,6 +169,7 @@ which nmap metasploit sqlmap nikto
 **Bootstrap logs:** `/var/log/cloud-init-output.log`
 
 The bootstrap script automatically installs:
+
 * XFCE desktop environment
 * XRDP server for remote desktop access
 * Essential Kali penetration testing tools
@@ -179,6 +190,7 @@ aws ec2 get-password-data \
 ```
 
 Or use the AWS Console:
+
 1. Navigate to EC2 → Instances
 2. Select the Windows instance
 3. Actions → Security → Get Windows Password
@@ -199,16 +211,19 @@ remmina -c rdp://Administrator@$(terraform output -raw windows_public_ip)
 **Post-connection setup:**
 
 1. Disable Windows Firewall (for testing only):
+
    ```powershell
    Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
    ```
 
 2. Install Splunk Universal Forwarder:
-   * Download from: https://www.splunk.com/en_us/download/universal-forwarder.html
+
+   * Download from: [https://www.splunk.com/en_us/download/universal-forwarder.html](https://www.splunk.com/en_us/download/universal-forwarder.html)
    * Install to: `C:\Program Files\SplunkUniversalForwarder`
    * Configure forwarding to Tools server IP on port 9997
 
 3. Enable Windows Event Logging:
+
    ```powershell
    wevtutil sl Security /e:true
    wevtutil sl Application /e:true
@@ -223,7 +238,7 @@ remmina -c rdp://Administrator@$(terraform output -raw windows_public_ip)
 ssh -i ./deployer_key.pem ubuntu@$(terraform output -raw tools_public_ip)
 ```
 
-**Verication:**
+**Verification:**
 
 ```bash
 # Check system resources
@@ -241,6 +256,14 @@ The tools instance requires manual installation of Splunk and Nessus (see next s
 ### Splunk Enterprise
 
 **1. Install Splunk:**
+
+> **Important:** Set a secure admin password before running the installation script:
+>
+> ```bash
+> export SPLUNK_ADMIN_PASS='YourSecureP@ssw0rd!'
+> ```
+>
+> Password requirements: minimum 8 characters with uppercase, lowercase, number, and special character.
 
 ```bash
 # SSH to tools instance
@@ -266,9 +289,7 @@ sudo /opt/splunk/bin/splunk enable boot-start -user splunk
 
 Access Splunk Web UI: `http://<TOOLS_PUBLIC_IP>:8000`
 
-Default credentials on first login:
-* Username: `admin`
-* Password: `Changeme123!` (change immediately after login)
+Default credentials on first login will be set from the installer or must be changed immediately.
 
 **3. Enable receiving from forwarders:**
 
@@ -283,6 +304,7 @@ Default credentials on first login:
 **4. Create indexes for Windows logs:**
 
 In Splunk Web UI:
+
 1. Settings → Indexes → New Index
 2. Create index: `win_security`
 3. Set data type: Event
@@ -329,11 +351,14 @@ server = <TOOLS_PRIVATE_IP>:9997
 
 Restart Splunk Universal Forwarder service.
 
-### Tenable Nessus Essentials
+### Tenable Nessus
+
+
+Essentials
 
 **1. Register for Nessus Essentials:**
 
-Visit: https://www.tenable.com/products/nessus/nessus-essentials
+Visit: [https://www.tenable.com/products/nessus/nessus-essentials](https://www.tenable.com/products/nessus/nessus-essentials)
 
 Register and obtain activation code (free for home use, scans up to 16 IPs).
 
@@ -366,6 +391,7 @@ sudo systemctl enable --now nessusd
 Access Nessus Web UI: `https://<TOOLS_PUBLIC_IP>:8834`
 
 Initial setup:
+
 1. Accept the SSL warning (self-signed certificate)
 2. Choose "Nessus Essentials"
 3. Enter activation code from registration
@@ -376,6 +402,7 @@ Initial setup:
 
 1. Create new scan → Basic Network Scan
 2. Add targets:
+
    * Kali Linux IP (private IP from VPC)
    * Windows Server IP (private IP from VPC)
 3. Configure scan schedule (optional)
