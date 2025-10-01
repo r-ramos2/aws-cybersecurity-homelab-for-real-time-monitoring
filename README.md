@@ -547,7 +547,7 @@ rm -f ./deployer_key.pem
 
 ## Security Considerations
 
-This homelab uses a **single public subnet** for simplicity and cost efficiency. All instances have public IPs but restrict ingress to the admin IP only. It is for controlled, educational use—not production.
+This homelab uses a **single public subnet** for simplicity and cost efficiency. All instances have public IPs but restrict ingress to the admin IP only. It is intended for controlled, educational testing rather than production use. Never expose production systems without applying the hardening steps below.
 
 **For production, harden as follows:**
 
