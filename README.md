@@ -1,16 +1,35 @@
 # AWS Cybersecurity Homelab for Real-Time Monitoring
 
-[![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5.0-blue)](https://www.terraform.io/)
+[![Terraform](https://img.shields.io/badge/Terraform-%3E%3D1.5.0-blue)](https://www.terraform.io/) [![AWS](https://img.shields.io/badge/AWS-Cloud-orange)](https://aws.amazon.com/) [![Kali](https://img.shields.io/badge/Kali-Linux-blue)](https://www.kali.org/) [![Splunk](https://img.shields.io/badge/Splunk-Enterprise-green)](https://www.splunk.com/) [![Nessus](https://img.shields.io/badge/Nessus-Essentials-red)](https://www.tenable.com/)
 
-☁️ **Cloud Cybersecurity Homelab**
+AWS-based attack/defend cybersecurity homelab with Kali Linux, Windows Server 2019, Splunk Enterprise, and Nessus Essentials, fully automated with Terraform.
 
-Attack/defend lab on AWS with:
+---
 
-* **Kali Linux** for penetration testing
-* **Windows Server 2019** as attack target
-* **Security Tools Box (Ubuntu)** running Splunk Enterprise & Nessus Essentials
+## Quickstart (For Experienced Users)
 
-All infrastructure defined in Terraform for reproducibility, security, and scalability.
+```bash
+# 1. Clone repo and enter terraform folder
+git clone https://github.com/r-ramos2/scalable-aws-cybersecurity-lab-for-real-time-monitoring-and-vulnerability-management.git
+cd scalable-aws-cybersecurity-lab-for-real-time-monitoring-and-vulnerability-management/terraform
+
+# 2. Configure your IP
+cp terraform.tfvars.example terraform.tfvars
+# edit terraform.tfvars → set allowed_cidr = "YOUR_PUBLIC_IP/32"
+
+# 3. Deploy infrastructure
+terraform init
+terraform apply -auto-approve
+
+# 4. Connect to instances
+# Kali:    ssh -i ./deployer_key.pem kali@$(terraform output -raw kali_public_ip)
+# Tools:   ssh -i ./deployer_key.pem ubuntu@$(terraform output -raw tools_public_ip)
+# Windows: Retrieve password and RDP (see outputs)
+
+# 5. Access security tools
+# Splunk:  http://$(terraform output -raw tools_public_ip):8000
+# Nessus:  https://$(terraform output -raw tools_public_ip):8834
+```
 
 ---
 
@@ -22,12 +41,14 @@ All infrastructure defined in Terraform for reproducibility, security, and scala
 4. [Repository Structure](#repository-structure)
 5. [Getting Started](#getting-started)
 6. [Instance Configuration](#instance-configuration)
-7. [Tool Installation & Configuration](#tool-installation--configuration)
-8. [Cleanup](#cleanup)
-9. [Best Practices](#best-practices)
-10. [Security Considerations](#security-considerations)
-11. [Next Steps & Enhancements](#next-steps--enhancements)
-12. [Resources](#resources)
+7. [Security Tools Setup](#security-tools-setup)
+8. [Running Security Operations](#running-security-operations)
+9. [Cleanup](#cleanup)
+10. [Best Practices](#best-practices)
+11. [Security Considerations](#security-considerations)
+12. [Troubleshooting](#troubleshooting)
+13. [Next Steps & Enhancements](#next-steps--enhancements)
+14. [Resources](#resources)
 
 ---
 
@@ -35,184 +56,532 @@ All infrastructure defined in Terraform for reproducibility, security, and scala
 
 ![Architecture Diagram](images/architecture-diagram.png)
 
-Single public VPC containing three EC2 hosts in a public subnet, each secured by its own security group.
-
----
-
-## Architecture Overview
-
-* **VPC**: 10.0.0.0/16
-* **Public Subnet**: 10.0.1.0/24
-* **Internet Gateway & Route**: 0.0.0.0/0 → IGW
-* **Security Groups**
-
-  * **Win/Kali SG**: SSH (22), RDP (3389), ICMP
-  * **Tools SG**: SSH (22), Splunk (8000/9997), Nessus (8834), ICMP
-* **EC2 Instances**
-
-  * **windows**: Windows Server 2019 (t3.medium)
-  * **kali**: Kali Linux (t3.small)
-  * **tools**: Ubuntu 20.04 (t3.large)
-
----
-
-## Prerequisites
-
-* **AWS account** with EC2, VPC, IAM permissions
-* **AWS CLI** (run `aws configure`)
-* **Terraform** >= 1.5.0
-* **SSH client** (OpenSSH or PuTTY)
-* **RDP client** (Microsoft Remote Desktop)
-
----
-
-## Repository Structure
-
-```text
-.
-├── images/               # Architecture diagram
-├── scripts/              # Post-launch scripts
-│   ├── kali_setup.sh     # Kali user_data script
-│   ├── nessus_install.sh
-│   └── splunk_inputs.conf
-├── terraform/            # Terraform config
-│   ├── provider.tf
-│   ├── variables.tf
-│   ├── main.tf
-│   └── outputs.tf
-└── README.md             # This file
-```
+Single public VPC with three EC2 hosts (Kali, Windows, Tools) in a public subnet, each secured by dedicated security groups.
 
 ---
 
 ## Getting Started
 
-### 1. Clone the repo
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/r-ramos2/scalable-aws-cybersecurity-lab-for-real-time-monitoring-and-vulnerability-management.git
 cd scalable-aws-cybersecurity-lab-for-real-time-monitoring-and-vulnerability-management/terraform
 ```
 
-### 2. Configure allowed CIDR
+### 2. Configure variables & authentication
 
-Before applying Terraform, set your current public IP in `terraform.tfvars`:
+**Important:** Terraform auto-generates an RSA keypair and saves it as `deployer_key.pem`. Back up any existing file with this name before proceeding.
 
-```ini
-allowed_cidr = "203.0.113.25/32" # your home IP
-```
-
-### 3. Configure AWS & Terraform
+Create your configuration file:
 
 ```bash
-terraform init
-terraform validate
-terraform plan -out=plan.tf
-terraform apply plan.tf
+cp terraform.tfvars.example terraform.tfvars
 ```
 
-On success you’ll see outputs for key name and public IPs.
+Edit `terraform.tfvars` and set your public IP:
+
+```hcl
+# Required: Your current public IP (find with: curl ifconfig.me)
+allowed_cidr = "203.0.113.25/32"  # REPLACE with YOUR_PUBLIC_IP/32
+
+# Optional: Override instance types for cost optimization
+# kali_instance_type    = "t3.micro"   # Minimum for basic testing
+# windows_instance_type = "t3.small"   # Reduce Windows costs
+# tools_instance_type   = "t3.medium"  # Reduce tools server costs
+```
+
+**Do not use RFC-5737 documentation addresses (203.0.113.x) in production.**
+
+### 3. Provision infrastructure
+
+```bash
+# Initialize Terraform and download providers
+terraform init
+
+# Validate configuration syntax
+terraform validate
+
+# Preview infrastructure changes
+terraform plan -out=plan.tfplan
+
+# Apply the plan (creates AWS resources)
+terraform apply plan.tfplan
+```
+
+Outputs:
+- SSH private key location
+- Public IPs for all instances
+- Pre-formatted SSH and RDP commands
+- Service URLs for Splunk and Nessus
+- Windows password retrieval command
+
+Save these outputs:
+
+```bash
+terraform output > lab_info.txt
+```
 
 ---
 
 ## Instance Configuration
 
-### Kali Linux
+### Kali Linux (Attacker Machine)
+
+**Connect via SSH:**
 
 ```bash
-ssh -i ../terraform/deployer_key.pem kali@<KALI_PUBLIC_IP>
+ssh -i ./deployer_key.pem kali@$(terraform output -raw kali_public_ip)
 ```
 
-Kali is configured via `scripts/kali_setup.sh` (XFCE desktop + XRDP).
+**Connect via RDP (XFCE Desktop):**
 
-### Windows Server 2019
+```bash
+# Using FreeRDP (Linux/macOS)
+xfreerdp /u:kali /v:$(terraform output -raw kali_public_ip):3389 /cert:ignore
 
-1. Retrieve Administrator password from AWS Console.
-2. RDP to `RDP://<WINDOWS_PUBLIC_IP>`.
+# Using Microsoft Remote Desktop (Windows/macOS)
+# Connect to: kali_public_ip:3389
+# Username: kali
+# Password: kali
+```
+
+**Verification:**
+
+```bash
+# Check XRDP status
+sudo systemctl status xrdp
+
+# Verify Kali tools installation
+which nmap metasploit sqlmap nikto
+```
+
+**Bootstrap logs:** `/var/log/cloud-init-output.log`
+
+The bootstrap script automatically installs:
+- XFCE desktop environment
+- XRDP server for remote desktop access
+- Essential Kali penetration testing tools
+
+### Windows Server 2019 (Target Machine)
+
+**Retrieve Administrator password:**
+
+Wait 4-5 minutes after instance launch, then run:
+
+```bash
+# From your local machine (requires AWS CLI)
+aws ec2 get-password-data \
+  --instance-id $(terraform output -raw windows_instance_id) \
+  --priv-launch-key ./deployer_key.pem \
+  --query 'PasswordData' \
+  --output text | base64 -d
+```
+
+Or use the AWS Console:
+1. Navigate to EC2 → Instances
+2. Select the Windows instance
+3. Actions → Security → Get Windows Password
+4. Upload `deployer_key.pem`
+
+**Connect via RDP:**
+
+```bash
+# Windows/macOS: Use Microsoft Remote Desktop
+# Connect to: windows_public_ip:3389
+# Username: Administrator
+# Password: (from command above)
+
+# Linux: Use Remmina or FreeRDP
+remmina -c rdp://Administrator@$(terraform output -raw windows_public_ip)
+```
+
+**Post-connection setup:**
+
+1. Disable Windows Firewall (for testing only):
+   ```powershell
+   Set-NetFirewallProfile -Profile Domain,Public,Private -Enabled False
+   ```
+
+2. Install Splunk Universal Forwarder:
+   - Download from: https://www.splunk.com/en_us/download/universal-forwarder.html
+   - Install to: `C:\Program Files\SplunkUniversalForwarder`
+   - Configure forwarding to Tools server IP on port 9997
+
+3. Enable Windows Event Logging:
+   ```powershell
+   wevtutil sl Security /e:true
+   wevtutil sl Application /e:true
+   wevtutil sl System /e:true
+   ```
 
 ### Security Tools Box (Ubuntu)
 
-```bash
-ssh -i ../terraform/deployer_key.pem ubuntu@<TOOLS_PUBLIC_IP>
-```
-
-To install Nessus:
+**Connect via SSH:**
 
 ```bash
-bash ../scripts/nessus_install.sh
+ssh -i ./deployer_key.pem ubuntu@$(terraform output -raw tools_public_ip)
 ```
+
+**Verication:**
+
+```bash
+# Check system resources
+free -h
+df -h
+top
+```
+
+The tools instance requires manual installation of Splunk and Nessus (see next section).
 
 ---
 
-## Tool Installation & Configuration
+## Security Tools Setup
 
 ### Splunk Enterprise
 
+**1. Install Splunk:**
+
 ```bash
-wget -O splunk.deb https://download.splunk.com/releases/9.1.0/linux/splunk.deb
+# SSH to tools instance
+ssh -i ./deployer_key.pem ubuntu@$(terraform output -raw tools_public_ip)
+
+# Change to home directory
+cd ~
+
+# Download Splunk (version may change - check splunk.com)
+wget -O splunk.deb "https://download.splunk.com/products/splunk/releases/9.1.0/linux/splunk-9.1.0-1c86ca0bacc3-linux-2.6-amd64.deb"
+
+# Install package
 sudo dpkg -i splunk.deb
+
+# Start Splunk and accept license
 sudo /opt/splunk/bin/splunk start --accept-license --answer-yes
+
+# Enable boot-start
+sudo /opt/splunk/bin/splunk enable boot-start -user splunk
 ```
 
-* UI: `http://<TOOLS_PUBLIC_IP>:8000`
-* Forwarder port: 9997
+**2. Configure Splunk:**
+
+Access Splunk Web UI: `http://<TOOLS_PUBLIC_IP>:8000`
+
+Default credentials on first login:
+- Username: `admin`
+- Password: `Changeme123!` (change immediately after login)
+
+**3. Enable receiving from forwarders:**
+
+```bash
+# On tools instance
+/opt/splunk/bin/splunk enable listen 9997 -auth admin:your_password
+
+# Restart Splunk
+/opt/splunk/bin/splunk restart
+```
+
+**4. Create indexes for Windows logs:**
+
+In Splunk Web UI:
+1. Settings → Indexes → New Index
+2. Create index: `win_security`
+3. Set data type: Event
+4. Save
+
+**5. Configure Windows Forwarder:**
+
+On Windows instance, edit:
+`C:\Program Files\SplunkUniversalForwarder\etc\system\local\inputs.conf`
+
+Add:
+
+```ini
+[default]
+host = WIN10-WORKSTATION
+
+[WinEventLog://Security]
+sourcetype = WinEventLog:Security
+index = win_security
+disabled = false
+
+[WinEventLog://Application]
+sourcetype = WinEventLog:Application
+index = win_security
+disabled = false
+
+[WinEventLog://System]
+sourcetype = WinEventLog:System
+index = win_security
+disabled = false
+```
+
+Edit `outputs.conf`:
+
+```ini
+[tcpout]
+defaultGroup = default-autolb-group
+
+[tcpout:default-autolb-group]
+server = <TOOLS_PRIVATE_IP>:9997
+
+[tcpout-server://<TOOLS_PRIVATE_IP>:9997]
+```
+
+Restart Splunk Universal Forwarder service.
 
 ### Tenable Nessus Essentials
 
+**1. Register for Nessus Essentials:**
+
+Visit: https://www.tenable.com/products/nessus/nessus-essentials
+
+Register and obtain activation code (free for home use, scans up to 16 IPs).
+
+**2. Install Nessus:**
+
 ```bash
+# SSH to tools instance
+ssh -i ./deployer_key.pem ubuntu@$(terraform output -raw tools_public_ip)
+
+# Run installation script
+cd ~
 bash ../scripts/nessus_install.sh
 ```
 
-UI: `https://<TOOLS_PUBLIC_IP>:8834`
+Or manually:
+
+```bash
+# Download Nessus package
+wget -O Nessus-10.3.0-debian6_amd64.deb "https://www.tenable.com/downloads/api/v2/pages/nessus/files/Nessus-10.3.0-debian6_amd64.deb"
+
+# Install package
+sudo dpkg -i Nessus-10.3.0-debian6_amd64.deb
+
+# Start Nessus service
+sudo systemctl enable --now nessusd
+```
+
+**3. Configure Nessus:**
+
+Access Nessus Web UI: `https://<TOOLS_PUBLIC_IP>:8834`
+
+Initial setup:
+1. Accept the SSL warning (self-signed certificate)
+2. Choose "Nessus Essentials"
+3. Enter activation code from registration
+4. Create admin user credentials
+5. Wait for plugin updates (15-30 minutes)
+
+**4. Add scan targets:**
+
+1. Create new scan → Basic Network Scan
+2. Add targets:
+   - Kali Linux IP (private IP from VPC)
+   - Windows Server IP (private IP from VPC)
+3. Configure scan schedule (optional)
+4. Launch scan
+
+---
+
+## Running Security Operations
+
+### Attack Simulation (From Kali)
+
+**1. Network reconnaissance:**
+
+```bash
+# Ping sweep
+nmap -sn 10.0.1.0/24
+
+# Port scan Windows target
+nmap -sV -p- <windows_private_ip>
+
+# Service enumeration
+nmap -sC -sV <windows_private_ip>
+```
+
+**2. Vulnerability scanning:**
+
+```bash
+# SMB enumeration
+enum4linux -a <windows_private_ip>
+
+# Web application scanning (if IIS installed)
+nikto -h http://<windows_private_ip>
+```
+
+**3. Exploitation (controlled environment only):**
+
+```bash
+# Metasploit Framework
+msfconsole
+
+# Search for exploits
+msf6 > search type:exploit platform:windows
+```
+
+### Monitoring & Detection (In Splunk)
+
+**1. View incoming logs:**
+
+```spl
+index=win_security
+| stats count by sourcetype, host
+```
+
+**2. Detect RDP logins:**
+
+```spl
+index=win_security EventCode=4624 Logon_Type=10
+| table _time, User, Source_Network_Address
+```
+
+**3. Monitor failed login attempts:**
+
+```spl
+index=win_security EventCode=4625
+| stats count by Account_Name, Source_Network_Address
+| where count > 5
+```
+
+**4. Detect suspicious processes:**
+
+```spl
+index=win_security EventCode=4688
+| stats count by New_Process_Name
+| sort -count
+```
+
+**5. Create alerts:**
+
+Settings → Searches, reports, and alerts → New Alert
+
+Example: Alert on 5+ failed logins in 5 minutes.
+
+### Vulnerability Management (In Nessus)
+
+**1. Review scan results:**
+
+- Navigate to Scans → Select completed scan
+- Review vulnerabilities by severity: Critical, High, Medium, Low, Info
+
+**2. Prioritize remediation:**
+
+Focus on:
+- Critical vulnerabilities with high CVSS scores
+- Vulnerabilities with public exploits available
+- Services exposed to the internet
+
+**3. Export reports:**
+
+- Select scan → Export
+- Choose format: PDF, HTML, CSV
+- Share with stakeholders
+
+**4. Track remediation:**
+
+- Re-scan after applying patches
+- Compare historical scan results
+- Document remediation efforts
 
 ---
 
 ## Cleanup
+
+**Destroy all AWS resources:**
 
 ```bash
 cd terraform
 terraform destroy -auto-approve
 ```
 
+**Verify deletion:**
+
+```bash
+# Check for remaining resources
+aws ec2 describe-instances --filters "Name=tag:Project,Values=aws-cybersecurity-homelab"
+
+# Check for remaining volumes
+aws ec2 describe-volumes --filters "Name=tag:Project,Values=aws-cybersecurity-homelab"
+```
+
+**Important:** The `deployer_key.pem` file remains on disk after `terraform destroy`. Delete manually if no longer needed:
+
+```bash
+rm -f ./deployer_key.pem
+```
+
 ---
 
 ## Best Practices
 
-* Use least-privilege IAM
-* Restrict SG ingress to your CIDR
-* Rotate SSH keys regularly
-* Enable CloudTrail and CloudWatch alerts
+**Infrastructure Management:**
+- Use remote state (S3 + DynamoDB) for team collaboration
+- Tag all resources consistently for cost tracking
+- Implement least-privilege IAM roles for automation
+- Enable CloudTrail for audit logging
+- Set up AWS billing alerts
+
+**Security Hygiene:**
+- Rotate SSH keys every 90 days
+- Change default passwords immediately
+- Restrict security group ingress to your current IP only
+- Never use 0.0.0.0/0 for homelab security groups
+- Enable MFA on AWS root and IAM accounts
+
+**Cost Optimization:**
+- Run `terraform destroy` when not actively using the lab
+- Use t3.micro/t3.small for cost-sensitive testing
+- Consider spot instances for significant savings (commented in main.tf)
+- Schedule automated shutdown during non-business hours
+- Monitor costs with AWS Cost Explorer
+
+**Operational Excellence:**
+- Document all custom configurations
+- Version control all infrastructure code
+- Test disaster recovery procedures
+- Maintain separate environments (dev/prod)
+- Implement automated backups
 
 ---
 
-### Security Considerations
+## Security Considerations
 
-For cost efficiency, this lab uses a single public subnet. All instances are restricted by Security Groups to accept connections **only from the administrator’s IP (no 0.0.0.0/0 exposure)**.  
+This homelab intentionally uses a **single public subnet design** for cost efficiency and simplicity. All instances have public IPs and are protected by security groups that **restrict ingress to your administrator IP only** (no 0.0.0.0/0 exposure). It is intended for controlled, educational testing rather than production use. Never expose production systems without applying the hardening steps below.
 
-In a production or enterprise environment, best practice would be to:
-- Place sensitive systems (Splunk, Nessus, Windows) in **private subnets**
-- Use a **NAT Gateway** for outbound updates
-- Provide access via a **VPN or bastion host**, not public IPs
+**For production, apply these hardening steps:**
 
-This design choice balances **security awareness** with **budget constraints**, while still demonstrating real-world monitoring and attack/defense workflows.
-
+* Move tools and Windows hosts to **private subnets** and place a bastion host or VPN in a public subnet.
+* Use a **NAT Gateway** (or proxy) for outbound-only internet access from private subnets.
+* Replace SSH bastions with **AWS Systems Manager Session Manager** for secure, auditable access.
+* Attach **IAM roles and instance profiles** to EC2 instances instead of long-lived credentials.
+* Front public services with an **Application Load Balancer (ALB)** using **TLS (ACM)** and apply WAF rules where appropriate.
+* Enable continuous threat monitoring: **GuardDuty**, **Amazon Inspector**, and **Security Hub**.
+* Enable full logging and observability: **VPC Flow Logs**, **CloudTrail**, and **CloudWatch Logs/Metrics**.
+* Protect data at rest and in transit with **KMS-managed keys**, **S3 bucket policies**, and **EBS encryption**.
+* Automate patching and vulnerability management using **SSM Patch Manager** and scheduled **Nessus/Inspector** scans.
+* Enforce **least-privilege IAM policies** and conduct regular role and policy audits.
 
 ---
 
 ## Next Steps & Enhancements
 
-* Modularize Terraform
-* Remote state (S3 + DynamoDB)
-* Integrate Ansible
-* Add IDS/IPS (Suricata, Zeek)
+**Immediate improvements:**
+
+* Add IAM roles and instance profiles for all EC2 instances (for Windows password retrieval and SSM access).
+* Automate tool installation on the Tools host via `user_data` (`splunk`, `nessus`) and include checksum verification.
+* Configure a **remote Terraform state backend** (S3 + DynamoDB) and add CI checks (`terraform fmt`, `terraform validate`).
+* Add **CloudWatch metrics and alarms** with dashboards for host and service health.
+* Enable scheduled **EBS snapshots** or use **AWS Backup** for automated data protection.
 
 ---
 
 ## Resources
 
+**Official Documentation:**
+
 * [AWS Documentation](https://aws.amazon.com/documentation/)
-* [Terraform Documentation](https://www.terraform.io/docs)
+* [Terraform Documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 * [Splunk Documentation](https://docs.splunk.com/)
 * [Nessus Documentation](https://docs.tenable.com/nessus/)
-* [Kali Linux](https://www.kali.org/)
-* [Windows Support](https://support.microsoft.com/windows)
+* [Kali Linux Tools](https://www.kali.org/tools/)
