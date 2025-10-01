@@ -295,7 +295,10 @@ resource "aws_instance" "windows" {
       Name = "${local.project_name}-windows-root-volume"
     })
   }
-  # Spot instance configuration (commented out for reliability)
+
+  # Use on-demand instances for reliability
+  # Note: Spot instances can be terminated with 2-minute notice
+  # Uncomment the block below to use Spot instances (cost savings)
   # instance_market_options {
   #   market_type = "spot"
   #   spot_options {
