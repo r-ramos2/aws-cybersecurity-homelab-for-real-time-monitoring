@@ -6,14 +6,14 @@ output "private_key_path" {
 }
 
 # EC2 Instance IDs
-output "windows_instance_id" {
-  description = "Instance ID of Windows Server (needed for password retrieval)"
-  value       = aws_instance.windows.id
-}
-
 output "kali_instance_id" {
   description = "Instance ID of Kali Linux"
   value       = aws_instance.kali.id
+}
+
+output "windows_instance_id" {
+  description = "Instance ID of Windows Server (needed for password retrieval)"
+  value       = aws_instance.windows.id
 }
 
 output "tools_instance_id" {
@@ -22,25 +22,19 @@ output "tools_instance_id" {
 }
 
 # EC2 Public IPs
-output "windows_public_ip" {
-  description = "Public IP of the Windows Server instance"
-  value       = aws_instance.windows.public_ip
-}
-
 output "kali_public_ip" {
   description = "Public IP of the Kali Linux instance"
   value       = aws_instance.kali.public_ip
 }
 
+output "windows_public_ip" {
+  description = "Public IP of the Windows Server instance"
+  value       = aws_instance.windows.public_ip
+}
+
 output "tools_public_ip" {
   description = "Public IP of the Security Tools (Ubuntu) instance"
   value       = aws_instance.tools.public_ip
-}
-
-# RDP / SSH convenience commands
-output "windows_rdp_url" {
-  description = "RDP URL for Windows Server"
-  value       = "rdp://${aws_instance.windows.public_ip}:${var.rdp_port}"
 }
 
 output "kali_ssh_cmd" {
@@ -51,6 +45,12 @@ output "kali_ssh_cmd" {
 output "kali_rdp_cmd" {
   description = "RDP command to connect to Kali Linux (XFCE desktop)"
   value       = "xfreerdp /u:kali /v:${aws_instance.kali.public_ip}:${var.rdp_port} /cert:ignore"
+}
+
+# RDP / SSH convenience commands
+output "windows_rdp_url" {
+  description = "RDP URL for Windows Server"
+  value       = "rdp://${aws_instance.windows.public_ip}:${var.rdp_port}"
 }
 
 output "tools_ssh_cmd" {
