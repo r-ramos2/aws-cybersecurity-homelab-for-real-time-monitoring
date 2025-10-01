@@ -37,6 +37,7 @@ output "tools_public_ip" {
   value       = aws_instance.tools.public_ip
 }
 
+# RDP / SSH convenience commands
 output "kali_ssh_cmd" {
   description = "SSH command to connect to Kali Linux"
   value       = "ssh -i ${local_file.private_key_pem.filename} kali@${aws_instance.kali.public_ip}"
@@ -47,7 +48,6 @@ output "kali_rdp_cmd" {
   value       = "xfreerdp /u:kali /v:${aws_instance.kali.public_ip}:${var.rdp_port} /cert:ignore"
 }
 
-# RDP / SSH convenience commands
 output "windows_rdp_url" {
   description = "RDP URL for Windows Server"
   value       = "rdp://${aws_instance.windows.public_ip}:${var.rdp_port}"
