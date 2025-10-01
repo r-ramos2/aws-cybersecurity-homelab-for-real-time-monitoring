@@ -547,20 +547,20 @@ rm -f ./deployer_key.pem
 
 ## Security Considerations
 
-This homelab uses a **single public subnet** for simplicity and cost efficiency. All instances have public IPs but restrict ingress to the admin IP only. It is intended for controlled, educational testing rather than production use. Never expose production systems without applying the hardening steps below.
+This homelab uses a single public subnet for simplicity and cost efficiency. All instances have public IPs but restrict ingress to the admin IP only. It is intended for controlled, educational testing rather than production use. Never expose production systems without applying the hardening steps below.
 
 **For production, harden as follows:**
 
-* Move workloads to **private subnets** behind a bastion or VPN
-* Use a **NAT Gateway** for outbound internet access
-* Replace SSH with **SSM Session Manager**
-* Attach **IAM roles** to EC2s instead of static keys
-* Protect services with **ALB + TLS (ACM)** and **WAF**
-* Enable **GuardDuty**, **Inspector**, and **Security Hub**
-* Capture full logs: **VPC Flow Logs**, **CloudTrail**, **CloudWatch**
-* Encrypt with **KMS**, **S3 policies**, and **EBS encryption**
-* Patch with **SSM Patch Manager** or scheduled scans
-* Enforce **least-privilege IAM policies** and regular audits
+* Move workloads to private subnets behind a bastion or VPN
+* Use a NAT Gateway for outbound internet access
+* Replace SSH with SSM Session Manager
+* Attach IAM roles to EC2s instead of static keys
+* Protect services with ALB + TLS (ACM) and WAF
+* Enable GuardDuty, Inspector, and Security Hub
+* Capture full logs: VPC Flow Logs, CloudTrail, CloudWatch
+* Encrypt with KMS, S3 policies, and EBS encryption
+* Patch with SSM Patch Manager or scheduled scans
+* Enforce least-privilege IAM policies and regular audits
 
 ---
 
@@ -577,7 +577,7 @@ This homelab uses a **single public subnet** for simplicity and cost efficiency.
 ## Resources
 
 * [AWS Documentation](https://aws.amazon.com/documentation/)
-* [Terraform Provider Docs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+* [Terraform Documentation](https://www.terraform.io/docs)
 * [Splunk Documentation](https://docs.splunk.com/)
 * [Nessus Documentation](https://docs.tenable.com/nessus/)
 * [Kali Linux Tools](https://www.kali.org/tools/)
