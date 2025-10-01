@@ -104,3 +104,100 @@ if ! dpkg -i "$NESSUS_PKG"; then
   echo "[WARN] dpkg reported missing dependencies; attempting to fix..."
   apt-get update
   apt-get install -f -y
+  
+  # Retry installation
+  if ! dpkg -i "$NESSUS_PKG"; then
+    echo "[ERROR] Nessus installation failed after dependency fix"
+    exit 1
+  fi
+fi
+
+# Verify Nessus was installed
+if [ ! -d "/opt/nessus" ]; then
+  echo "[ERROR] Nessus installation directory not found!"
+  exit 1
+fi
+
+# Enable and start Nessus service
+echo "[INFO] Starting Nessus service..."
+systemctl enable nessusd || {
+  echo "[ERROR] Failed to enable Nessus service"
+  exit 1
+}
+
+systemctl start nessusd || {
+  echo "[ERROR] Failed to start Nessus service"
+  exit 1
+}
+
+# Poll for Nessus service readiness (max 2 minutes)
+echo "[INFO] Waiting for Nessus service to become active..."
+echo "[INFO] This may take up to 2 minutes on first start..."
+
+SERVICE_READY=0
+for i in {1..24}; do
+  if systemctl is-active --quiet nessusd; then
+    echo "[INFO] Nessus service is active."
+    SERVICE_READY=1
+    break
+  fi
+  echo "[INFO] Waiting... (${i}/24)"
+  sleep 5
+done
+
+if [ $SERVICE_READY -eq 0 ]; then
+  echo "[WARN] Nessus service did not become active in expected time"
+  echo "[INFO] Check service status with: systemctl status nessusd"
+  echo "[INFO] Check logs with: journalctl -u nessusd -n 50"
+fi
+
+# Wait for web interface to be responsive
+echo "[INFO] Waiting for Nessus web interface to be ready..."
+WEB_READY=0
+for i in {1..12}; do
+  if curl -k -s -o /dev/null -w "%{http_code}" https://localhost:8834 | grep -q "200\|302\|403"; then
+    echo "[INFO] Nessus web interface is responding."
+    WEB_READY=1
+    break
+  fi
+  echo "[INFO] Waiting for web interface... (${i}/12)"
+  sleep 10
+done
+
+# Display access URL
+IP_ADDR=$(hostname -I | awk '{print $1}')
+
+echo ""
+echo "=========================================="
+if [ $WEB_READY -eq 1 ]; then
+  echo "[SUCCESS] Nessus installation complete!"
+else
+  echo "[INFO] Nessus installation complete (web interface still initializing)"
+fi
+echo "=========================================="
+echo ""
+
+if [ -n "$IP_ADDR" ]; then
+  echo "Access Nessus at: https://$IP_ADDR:8834"
+else
+  echo "Access Nessus at: https://<TOOLS_PUBLIC_IP>:8834"
+fi
+
+echo ""
+echo "Next Steps:"
+echo "  1. Navigate to the Nessus URL in your browser"
+echo "  2. Accept the SSL certificate warning (self-signed)"
+echo "  3. Choose 'Nessus Essentials' during setup"
+echo "  4. Enter your activation code from Tenable registration"
+echo "  5. Create admin user credentials"
+echo "  6. Wait for plugin compilation (15-30 minutes)"
+echo ""
+echo "Activation Code:"
+echo "  If you don't have one, register at:"
+echo "  https://www.tenable.com/products/nessus/nessus-essentials"
+echo ""
+echo "Troubleshooting:"
+echo "  - Service status: systemctl status nessusd"
+echo "  - Service logs: journalctl -u nessusd -n 50"
+echo "  - Nessus logs: /opt/nessus/var/nessus/logs/"
+echo "=========================================="
