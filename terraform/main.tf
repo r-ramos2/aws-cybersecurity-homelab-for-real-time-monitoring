@@ -183,6 +183,7 @@ resource "aws_security_group" "tools_sg" {
 
   # Splunk Web UI
   ingress {
+    description = "Splunk Web UI from allowed CIDR"
     from_port   = var.splunk_web_port
     to_port     = var.splunk_web_port
     protocol    = "tcp"
@@ -191,6 +192,7 @@ resource "aws_security_group" "tools_sg" {
 
   # Splunk Forwarder
   ingress {
+    description = "Splunk Forwarder from allowed CIDR"
     from_port   = var.splunk_forwarder_port
     to_port     = var.splunk_forwarder_port
     protocol    = "tcp"
@@ -199,6 +201,7 @@ resource "aws_security_group" "tools_sg" {
 
   # Nessus UI
   ingress {
+    description = "Nessus UI from allowed CIDR"
     from_port   = var.nessus_port
     to_port     = var.nessus_port
     protocol    = "tcp"
