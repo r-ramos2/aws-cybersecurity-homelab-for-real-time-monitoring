@@ -250,7 +250,7 @@ resource "aws_instance" "kali" {
     encrypted             = true
 
     tags = merge(local.common_tags, {
-      Name = "${local.project_name}-kali-server"
+      Name = "${local.project_name}-kali-root-volume"
     })
   }
 
@@ -290,8 +290,11 @@ resource "aws_instance" "windows" {
     volume_type           = "gp3"
     delete_on_termination = true
     encrypted             = true
-  }
 
+    tags = merge(local.common_tags, {
+      Name = "${local.project_name}-windows-root-volume"
+    })
+  }
   # Spot instance configuration (commented out for reliability)
   # instance_market_options {
   #   market_type = "spot"
@@ -326,6 +329,10 @@ resource "aws_instance" "tools" {
     volume_type           = "gp3"
     delete_on_termination = true
     encrypted             = true
+
+    tags = merge(local.common_tags, {
+      Name = "${local.project_name}-tools-root-volume"
+    })
   }
 
   # Use on-demand instances for reliability (no spot configuration)
