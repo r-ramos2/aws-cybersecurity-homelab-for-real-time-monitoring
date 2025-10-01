@@ -549,7 +549,7 @@ rm -f ./deployer_key.pem
 
 This homelab uses a single public subnet for simplicity and cost efficiency. All instances have public IPs but restrict ingress to the admin IP only. It is intended for controlled, educational testing rather than production use. Never expose production systems without applying the hardening steps below.
 
-**For production, harden as follows:**
+**For production, apply these hardening steps:**
 
 * Move workloads to private subnets behind a bastion or VPN
 * Use a NAT Gateway for outbound internet access
