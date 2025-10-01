@@ -31,18 +31,6 @@ variable "availability_zone" {
 }
 
 # AMI Lookup
-variable "windows_ami_owner" {
-  description = "Owner ID for Windows AMI"
-  type        = string
-  default     = "amazon"
-}
-
-variable "windows_ami_name_filter" {
-  description = "Filter for Windows AMI"
-  type        = string
-  default     = "Windows_Server-2019-English-Full-Base-*"
-}
-
 variable "kali_ami_owner" {
   description = "Owner ID for Kali AMI"
   type        = string
@@ -53,6 +41,18 @@ variable "kali_ami_name_filter" {
   description = "Filter for Kali AMI"
   type        = string
   default     = "kali-*-amd64-*-*"
+}
+
+variable "windows_ami_owner" {
+  description = "Owner ID for Windows AMI"
+  type        = string
+  default     = "amazon"
+}
+
+variable "windows_ami_name_filter" {
+  description = "Filter for Windows AMI"
+  type        = string
+  default     = "Windows_Server-2019-English-Full-Base-*"
 }
 
 variable "ubuntu_ami_owner" {
@@ -110,16 +110,16 @@ variable "nessus_port" {
 }
 
 # EC2 Sizing
-variable "windows_instance_type" {
-  description = "EC2 instance type for Windows server"
-  type        = string
-  default     = "t3.medium"
-}
-
 variable "kali_instance_type" {
   description = "EC2 instance type for Kali attacker VM"
   type        = string
   default     = "t3.small"
+}
+
+variable "windows_instance_type" {
+  description = "EC2 instance type for Windows server"
+  type        = string
+  default     = "t3.medium"
 }
 
 variable "tools_instance_type" {
@@ -129,16 +129,16 @@ variable "tools_instance_type" {
 }
 
 # Volume Sizes (GB)
-variable "windows_volume_size" {
-  description = "Root EBS volume size for Windows"
-  type        = number
-  default     = 30
-}
-
 variable "kali_volume_size" {
   description = "Root EBS volume size for Kali"
   type        = number
   default     = 12
+}
+
+variable "windows_volume_size" {
+  description = "Root EBS volume size for Windows"
+  type        = number
+  default     = 30
 }
 
 variable "tools_volume_size" {
