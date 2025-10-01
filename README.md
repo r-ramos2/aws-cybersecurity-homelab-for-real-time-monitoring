@@ -110,11 +110,11 @@ terraform apply plan.tfplan
 ```
 
 Outputs:
-- SSH private key location
-- Public IPs for all instances
-- Pre-formatted SSH and RDP commands
-- Service URLs for Splunk and Nessus
-- Windows password retrieval command
+* SSH private key location
+* Public IPs for all instances
+* Pre-formatted SSH and RDP commands
+* Service URLs for Splunk and Nessus
+* Windows password retrieval command
 
 Save these outputs:
 
@@ -159,9 +159,9 @@ which nmap metasploit sqlmap nikto
 **Bootstrap logs:** `/var/log/cloud-init-output.log`
 
 The bootstrap script automatically installs:
-- XFCE desktop environment
-- XRDP server for remote desktop access
-- Essential Kali penetration testing tools
+* XFCE desktop environment
+* XRDP server for remote desktop access
+* Essential Kali penetration testing tools
 
 ### Windows Server 2019 (Target Machine)
 
@@ -204,9 +204,9 @@ remmina -c rdp://Administrator@$(terraform output -raw windows_public_ip)
    ```
 
 2. Install Splunk Universal Forwarder:
-   - Download from: https://www.splunk.com/en_us/download/universal-forwarder.html
-   - Install to: `C:\Program Files\SplunkUniversalForwarder`
-   - Configure forwarding to Tools server IP on port 9997
+   * Download from: https://www.splunk.com/en_us/download/universal-forwarder.html
+   * Install to: `C:\Program Files\SplunkUniversalForwarder`
+   * Configure forwarding to Tools server IP on port 9997
 
 3. Enable Windows Event Logging:
    ```powershell
@@ -249,7 +249,7 @@ ssh -i ./deployer_key.pem ubuntu@$(terraform output -raw tools_public_ip)
 # Change to home directory
 cd ~
 
-# Download Splunk (version may change - check splunk.com)
+# Download Splunk (version may change * check splunk.com)
 wget -O splunk.deb "https://download.splunk.com/products/splunk/releases/9.1.0/linux/splunk-9.1.0-1c86ca0bacc3-linux-2.6-amd64.deb"
 
 # Install package
@@ -267,8 +267,8 @@ sudo /opt/splunk/bin/splunk enable boot-start -user splunk
 Access Splunk Web UI: `http://<TOOLS_PUBLIC_IP>:8000`
 
 Default credentials on first login:
-- Username: `admin`
-- Password: `Changeme123!` (change immediately after login)
+* Username: `admin`
+* Password: `Changeme123!` (change immediately after login)
 
 **3. Enable receiving from forwarders:**
 
@@ -376,8 +376,8 @@ Initial setup:
 
 1. Create new scan → Basic Network Scan
 2. Add targets:
-   - Kali Linux IP (private IP from VPC)
-   - Windows Server IP (private IP from VPC)
+   * Kali Linux IP (private IP from VPC)
+   * Windows Server IP (private IP from VPC)
 3. Configure scan schedule (optional)
 4. Launch scan
 
@@ -462,27 +462,27 @@ Example: Alert on 5+ failed logins in 5 minutes.
 
 **1. Review scan results:**
 
-- Navigate to Scans → Select completed scan
-- Review vulnerabilities by severity: Critical, High, Medium, Low, Info
+* Navigate to Scans → Select completed scan
+* Review vulnerabilities by severity: Critical, High, Medium, Low, Info
 
 **2. Prioritize remediation:**
 
 Focus on:
-- Critical vulnerabilities with high CVSS scores
-- Vulnerabilities with public exploits available
-- Services exposed to the internet
+* Critical vulnerabilities with high CVSS scores
+* Vulnerabilities with public exploits available
+* Services exposed to the internet
 
 **3. Export reports:**
 
-- Select scan → Export
-- Choose format: PDF, HTML, CSV
-- Share with stakeholders
+* Select scan → Export
+* Choose format: PDF, HTML, CSV
+* Share with stakeholders
 
 **4. Track remediation:**
 
-- Re-scan after applying patches
-- Compare historical scan results
-- Document remediation efforts
+* Re-scan after applying patches
+* Compare historical scan results
+* Document remediation efforts
 
 ---
 
@@ -516,72 +516,68 @@ rm -f ./deployer_key.pem
 ## Best Practices
 
 **Infrastructure Management:**
-- Use remote state (S3 + DynamoDB) for team collaboration
-- Tag all resources consistently for cost tracking
-- Implement least-privilege IAM roles for automation
-- Enable CloudTrail for audit logging
-- Set up AWS billing alerts
+* Use remote state (S3 + DynamoDB) for collaboration
+* Tag all resources for cost tracking
+* Apply least-privilege IAM roles
+* Enable CloudTrail for audit logging
+* Set AWS billing alerts
 
 **Security Hygiene:**
-- Rotate SSH keys every 90 days
-- Change default passwords immediately
-- Restrict security group ingress to your current IP only
-- Never use 0.0.0.0/0 for homelab security groups
-- Enable MFA on AWS root and IAM accounts
+* Rotate SSH keys every 90 days
+* Change default passwords immediately
+* Restrict security group ingress to your IP only
+* Never use 0.0.0.0/0 in security groups
+* Enable MFA on root and IAM accounts
 
 **Cost Optimization:**
-- Run `terraform destroy` when not actively using the lab
-- Use t3.micro/t3.small for cost-sensitive testing
-- Consider spot instances for significant savings (commented in main.tf)
-- Schedule automated shutdown during non-business hours
-- Monitor costs with AWS Cost Explorer
+* Run `terraform destroy` when not actively using the lab
+* Use t3.micro/t3.small for lightweight workloads
+* Consider spot instances for savings
+* Schedule auto-shutdown during idle hours
+* Track spend with AWS Cost Explorer
 
 **Operational Excellence:**
-- Document all custom configurations
-- Version control all infrastructure code
-- Test disaster recovery procedures
-- Maintain separate environments (dev/prod)
-- Implement automated backups
+* Document all configurations
+* Version-control infrastructure code
+* Test backup and recovery regularly
+* Maintain separate dev/prod environments
+* Automate snapshots and data protection
 
 ---
 
 ## Security Considerations
 
-This homelab intentionally uses a **single public subnet design** for cost efficiency and simplicity. All instances have public IPs and are protected by security groups that **restrict ingress to your administrator IP only** (no 0.0.0.0/0 exposure). It is intended for controlled, educational testing rather than production use. Never expose production systems without applying the hardening steps below.
+This homelab uses a **single public subnet** for simplicity and cost efficiency. All instances have public IPs but restrict ingress to the admin IP only. It is for controlled, educational use—not production.
 
-**For production, apply these hardening steps:**
+**For production, harden as follows:**
 
-* Move tools and Windows hosts to **private subnets** and place a bastion host or VPN in a public subnet.
-* Use a **NAT Gateway** (or proxy) for outbound-only internet access from private subnets.
-* Replace SSH bastions with **AWS Systems Manager Session Manager** for secure, auditable access.
-* Attach **IAM roles and instance profiles** to EC2 instances instead of long-lived credentials.
-* Front public services with an **Application Load Balancer (ALB)** using **TLS (ACM)** and apply WAF rules where appropriate.
-* Enable continuous threat monitoring: **GuardDuty**, **Amazon Inspector**, and **Security Hub**.
-* Enable full logging and observability: **VPC Flow Logs**, **CloudTrail**, and **CloudWatch Logs/Metrics**.
-* Protect data at rest and in transit with **KMS-managed keys**, **S3 bucket policies**, and **EBS encryption**.
-* Automate patching and vulnerability management using **SSM Patch Manager** and scheduled **Nessus/Inspector** scans.
-* Enforce **least-privilege IAM policies** and conduct regular role and policy audits.
+* Move workloads to **private subnets** behind a bastion or VPN
+* Use a **NAT Gateway** for outbound internet access
+* Replace SSH with **SSM Session Manager**
+* Attach **IAM roles** to EC2s instead of static keys
+* Protect services with **ALB + TLS (ACM)** and **WAF**
+* Enable **GuardDuty**, **Inspector**, and **Security Hub**
+* Capture full logs: **VPC Flow Logs**, **CloudTrail**, **CloudWatch**
+* Encrypt with **KMS**, **S3 policies**, and **EBS encryption**
+* Patch with **SSM Patch Manager** or scheduled scans
+* Enforce **least-privilege IAM policies** and regular audits
 
 ---
 
 ## Next Steps & Enhancements
 
-**Immediate improvements:**
-
-* Add IAM roles and instance profiles for all EC2 instances (for Windows password retrieval and SSM access).
-* Automate tool installation on the Tools host via `user_data` (`splunk`, `nessus`) and include checksum verification.
-* Configure a **remote Terraform state backend** (S3 + DynamoDB) and add CI checks (`terraform fmt`, `terraform validate`).
-* Add **CloudWatch metrics and alarms** with dashboards for host and service health.
-* Enable scheduled **EBS snapshots** or use **AWS Backup** for automated data protection.
+* Add IAM roles for all EC2 instances
+* Automate tool installation and checksum verification
+* Configure remote Terraform backend (S3 + DynamoDB)
+* Add CloudWatch metrics, alarms, and dashboards
+* Schedule automated EBS snapshots
 
 ---
 
 ## Resources
 
-**Official Documentation:**
-
 * [AWS Documentation](https://aws.amazon.com/documentation/)
-* [Terraform Documentation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+* [Terraform Provider Docs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 * [Splunk Documentation](https://docs.splunk.com/)
 * [Nessus Documentation](https://docs.tenable.com/nessus/)
 * [Kali Linux Tools](https://www.kali.org/tools/)
