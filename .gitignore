@@ -1,0 +1,15 @@
+# Terraform local state
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+
+# Local overrides
+terraform.tfvars
+
+# Generated SSH key
+deployer_key.pem
+
+# OS cruft
+.DS_Store
+

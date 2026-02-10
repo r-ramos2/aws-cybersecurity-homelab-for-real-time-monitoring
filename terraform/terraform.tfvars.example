@@ -1,0 +1,22 @@
+# Required: replace with your current public IP (with /32 CIDR mask)
+allowed_cidr            = "203.0.113.25/32"
+
+# Optional: override defaults (uncomment and edit if needed)
+# region                = "us-east-1"
+
+# EC2 instance types
+# windows_instance_type = "t3.medium"
+# kali_instance_type    = "t3.small"
+# tools_instance_type   = "t3.large"
+
+# Root volume sizes (GB)
+# windows_volume_size   = 30
+# kali_volume_size      = 12
+# tools_volume_size     = 30
+
+# Ports
+# ssh_port              = 22
+# rdp_port              = 3389
+# splunk_web_port       = 8000
+# splunk_forwarder_port = 9997
+# nessus_port           = 8834
