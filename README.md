@@ -51,7 +51,7 @@ terraform apply -auto-approve
 
 ## Table of Contents
 
-1. [Architecture](#Architecture)
+1. [Architecture](#architecture)
 2. [Architecture Overview](#architecture-overview)
 3. [Prerequisites](#prerequisites)
 4. [Repository Structure](#repository-structure)
