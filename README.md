@@ -14,6 +14,12 @@ AWS-based attack/defend cybersecurity homelab with Kali Linux, Windows Server 20
 - **Operational story**: Splunk and Nessus integrated for attack, detect, and remediate workflows.
 - **Cost-conscious**: Single-AZ, minimal instances, and an explicit cleanup workflow (`terraform destroy`) to avoid surprise bills.
 
+> **SSH private key**: After `terraform apply`, retrieve the key with:
+> ```bash
+> terraform output -raw private_key_pem > deployer_key.pem && chmod 400 deployer_key.pem
+> ```
+> The key is stored in Terraform state. Use an encrypted S3 backend with restricted IAM access to protect it in shared environments.
+
 ---
 
 ## Quickstart (For Experienced Users)
@@ -81,7 +87,10 @@ cd scalable-aws-cybersecurity-lab-for-real-time-monitoring-and-vulnerability-man
 
 ### 2. Configure variables & authentication
 
-**Important:** Terraform auto-generates an RSA keypair and saves it as `deployer_key.pem`. Back up any existing file with this name before proceeding.
+**Important:** Terraform generates an RSA keypair. After `terraform apply`, retrieve the private key manually:
+```bash
+terraform output -raw private_key_pem > deployer_key.pem && chmod 400 deployer_key.pem
+```
 
 Create your configuration file:
 
@@ -546,7 +555,7 @@ aws ec2 describe-instances --filters "Name=tag:Project,Values=aws-cybersecurity-
 aws ec2 describe-volumes --filters "Name=tag:Project,Values=aws-cybersecurity-homelab"
 ```
 
-**Important:** The `deployer_key.pem` file remains on disk after `terraform destroy`. Delete manually if no longer needed:
+**Important:** If you created `deployer_key.pem` locally, delete it manually when done:
 
 ```bash
 rm -f ./deployer_key.pem
