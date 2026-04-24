@@ -51,7 +51,7 @@ terraform apply -auto-approve
 
 ## Table of Contents
 
-1. [Topology](#topology)
+1. [Architecture](#Architecture)
 2. [Architecture Overview](#architecture-overview)
 3. [Prerequisites](#prerequisites)
 4. [Repository Structure](#repository-structure)
@@ -68,9 +68,9 @@ terraform apply -auto-approve
 
 ---
 
-## Topology
+## Architecture
 
-![Architecture Diagram](images/architecture-diagram.png)
+![Architecture Diagram](images/architecture-diagram.svg)
 
 Single public VPC with three EC2 hosts (Kali, Windows, Tools) in a public subnet, each secured by dedicated security groups. VPC Flow Logs are enabled to a CloudWatch log group for network visibility, and the tools instance has an IAM role for SSM and log integration.
 
