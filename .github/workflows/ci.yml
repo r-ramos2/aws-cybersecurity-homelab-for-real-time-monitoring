@@ -32,9 +32,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Shell script syntax check
+      - name: Shellcheck
         run: |
-          bash -n scripts/kali_setup.sh
-          bash -n scripts/nessus_install.sh
-          bash -n scripts/splunk_setup.sh
-          bash -n scripts/verify_lab.sh
+          sudo apt-get install -y shellcheck
+          shellcheck scripts/kali_setup.sh
+          shellcheck scripts/nessus_install.sh
+          shellcheck scripts/splunk_setup.sh
+          shellcheck scripts/verify_lab.sh
