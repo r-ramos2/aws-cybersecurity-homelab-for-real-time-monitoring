@@ -1,7 +1,7 @@
 # SSH Key
-output "private_key_path" {
-  description = "Path to the generated SSH private key"
-  value       = local_file.private_key_pem.filename
+output "private_key_pem" {
+  description = "Private key PEM — pipe to a file: terraform output -raw private_key_pem > deployer_key.pem && chmod 400 deployer_key.pem"
+  value       = tls_private_key.deployer.private_key_pem
   sensitive   = true
 }
 
@@ -51,7 +51,7 @@ output "tools_public_ip" {
 # RDP / SSH convenience commands
 output "kali_ssh_cmd" {
   description = "SSH command to connect to Kali Linux"
-  value       = "ssh -i ${local_file.private_key_pem.filename} kali@${aws_instance.kali.public_ip}"
+  value       = "ssh -i deployer_key.pem kali@${aws_instance.kali.public_ip}"
 }
 
 output "kali_rdp_cmd" {
@@ -66,7 +66,7 @@ output "windows_rdp_url" {
 
 output "tools_ssh_cmd" {
   description = "SSH command to connect to Tools server"
-  value       = "ssh -i ${local_file.private_key_pem.filename} ubuntu@${aws_instance.tools.public_ip}"
+  value       = "ssh -i deployer_key.pem ubuntu@${aws_instance.tools.public_ip}"
 }
 
 # Service URLs on Tools server
@@ -83,5 +83,5 @@ output "nessus_url" {
 # Helpful reminders
 output "windows_password_cmd" {
   description = "Command to retrieve Windows Administrator password (wait 4-5 minutes after launch)"
-  value       = "aws ec2 get-password-data --instance-id ${aws_instance.windows.id} --priv-launch-key ${local_file.private_key_pem.filename} --query 'PasswordData' --output text | base64 -d"
+  value       = "aws ec2 get-password-data --instance-id ${aws_instance.windows.id} --priv-launch-key deployer_key.pem --query 'PasswordData' --output text | base64 -d"
 }
