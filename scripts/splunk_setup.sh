@@ -138,7 +138,7 @@ sleep 10
 
 # Configure receiving port for forwarders
 echo "[INFO] Enabling data receiving on port 9997..."
-if ! /opt/splunk/bin/splunk enable listen 9997 -auth ${SPLUNK_ADMIN_USER}:${SPLUNK_ADMIN_PASS}; then
+if ! /opt/splunk/bin/splunk enable listen 9997 -auth "${SPLUNK_ADMIN_USER}":"${SPLUNK_ADMIN_PASS}"; then
   echo "[WARN] Failed to enable listening port. You may need to configure this manually."
 fi
 
