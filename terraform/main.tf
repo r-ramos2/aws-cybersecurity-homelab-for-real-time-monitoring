@@ -62,7 +62,7 @@ data "aws_ami" "ubuntu" {
 }
 
 # ============================================
-# 3. Networking: VPC, Subnet, IGW, Routing
+# 3. Networking: VPC, Subnets, IGW, Routing
 # ============================================
 resource "aws_vpc" "lab" {
   cidr_block           = var.vpc_cidr_block
@@ -85,6 +85,19 @@ resource "aws_subnet" "public" {
   })
 }
 
+# Private subnet for the Windows victim machine.
+# No public IP; outbound internet via NAT Gateway (needed for Windows Update / agents).
+resource "aws_subnet" "private" {
+  vpc_id                  = aws_vpc.lab.id
+  cidr_block              = var.private_subnet_cidr
+  availability_zone       = var.availability_zone
+  map_public_ip_on_launch = false
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-private-subnet"
+  })
+}
+
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.lab.id
 
@@ -93,6 +106,7 @@ resource "aws_internet_gateway" "igw" {
   })
 }
 
+# Public route table
 resource "aws_route_table" "rt" {
   vpc_id = aws_vpc.lab.id
 
@@ -110,6 +124,46 @@ resource "aws_route" "default_route" {
 resource "aws_route_table_association" "public_assoc" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.rt.id
+}
+
+# NAT Gateway (in public subnet) so Windows can reach the internet outbound
+resource "aws_eip" "nat" {
+  domain = "vpc"
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-nat-eip"
+  })
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public.id
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-nat-gw"
+  })
+
+  depends_on = [aws_internet_gateway.igw]
+}
+
+# Private route table — all outbound goes through NAT Gateway
+resource "aws_route_table" "private_rt" {
+  vpc_id = aws_vpc.lab.id
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-private-rt"
+  })
+}
+
+resource "aws_route" "private_nat_route" {
+  route_table_id         = aws_route_table.private_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.nat.id
+}
+
+resource "aws_route_table_association" "private_assoc" {
+  subnet_id      = aws_subnet.private.id
+  route_table_id = aws_route_table.private_rt.id
 }
 
 # ============================================
@@ -183,14 +237,14 @@ resource "aws_flow_log" "vpc" {
 }
 
 # ============================================
-# 5. Security Group
+# 5. Security Groups
 # ============================================
 resource "aws_security_group" "win_kali_sg" {
   name        = "win-kali-sg"
   description = "Allow SSH, RDP, and ICMP from ${var.allowed_cidr}"
   vpc_id      = aws_vpc.lab.id
 
-  # SSH access
+  # SSH access from your IP (Kali)
   ingress {
     description = "SSH from allowed CIDR"
     from_port   = var.ssh_port
@@ -199,7 +253,7 @@ resource "aws_security_group" "win_kali_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # RDP access
+  # RDP access from your IP (Kali)
   ingress {
     description = "RDP from allowed CIDR"
     from_port   = var.rdp_port
@@ -208,13 +262,32 @@ resource "aws_security_group" "win_kali_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # ICMP access
+  # ICMP from your IP
   ingress {
     description = "ICMP from allowed CIDR"
     from_port   = -1
     to_port     = -1
     protocol    = "icmp"
     cidr_blocks = [var.allowed_cidr]
+  }
+
+  # All TCP from within the VPC so Kali can attack Windows and
+  # Nessus can scan Windows across the subnet boundary
+  ingress {
+    description = "All TCP from VPC (Kali attacks and Nessus scans)"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr_block]
+  }
+
+  # ICMP from within the VPC (ping, traceroute during lab exercises)
+  ingress {
+    description = "ICMP from VPC"
+    from_port   = -1
+    to_port     = -1
+    protocol    = "icmp"
+    cidr_blocks = [var.vpc_cidr_block]
   }
 
   # Outbound traffic
@@ -379,8 +452,10 @@ resource "aws_iam_instance_profile" "tools" {
 }
 
 # ============================================
-# 7. EC2 Instance (Kali, Windows, and Tools)
+# 7. EC2 Instances (Kali, Windows, Tools)
 # ============================================
+
+# Kali — attacker, stays public (needs internet for tools; you SSH in directly)
 resource "aws_instance" "kali" {
   ami                         = data.aws_ami.kali.id
   instance_type               = var.kali_instance_type
@@ -424,12 +499,15 @@ resource "aws_instance" "kali" {
   })
 }
 
+# Windows — victim, moved to private subnet.
+# No public IP; access via RDP tunnel through Kali (see outputs).
+# Outbound internet (Windows Update, agents) goes via NAT Gateway.
 resource "aws_instance" "windows" {
   ami                         = data.aws_ami.windows.id
   instance_type               = var.windows_instance_type
-  subnet_id                   = aws_subnet.public.id
+  subnet_id                   = aws_subnet.private.id
   vpc_security_group_ids      = [aws_security_group.win_kali_sg.id]
-  associate_public_ip_address = true
+  associate_public_ip_address = false
   key_name                    = aws_key_pair.deployer.key_name
 
   root_block_device {
@@ -466,6 +544,7 @@ resource "aws_instance" "windows" {
   })
 }
 
+# Tools (Splunk + Nessus) — stays public (browser access to ports 8000 / 8834)
 resource "aws_instance" "tools" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.tools_instance_type
