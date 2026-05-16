@@ -8,9 +8,9 @@ AWS-based attack/defend cybersecurity homelab with Kali Linux, Windows Server 20
 
 ## Highlights (For Recruiters & Hiring Managers)
 
-- **Purpose-built security lab**: Kali attacker, Windows target, and Ubuntu tools box in AWS VPC for real-time detection and vulnerability management.
-- **Terraform-first infrastructure**: VPC, security groups, EC2, SSH key lifecycle, and logging (VPC Flow Logs) are all managed as code.
-- **Security-by-design**: IMDSv2 enforced, EBS encryption enabled, security groups restricted to your IP, and an IAM role on the tools instance for logs/SSM.
+- **Purpose-built security lab**: Kali attacker, Windows target, and Ubuntu tools box in an AWS VPC for real-time detection and vulnerability management.
+- **Terraform-first infrastructure**: VPC, public and private subnets, NAT Gateway, security groups, EC2, SSH key lifecycle, and logging (VPC Flow Logs) are all managed as code.
+- **Security-by-design**: Windows victim machine isolated in a private subnet with no public IP; IMDSv2 enforced; EBS encryption enabled; security groups restricted to your IP; IAM role on the tools instance for logs/SSM.
 - **Operational story**: Splunk and Nessus integrated for attack, detect, and remediate workflows.
 - **Cost-conscious**: Single-AZ, minimal instances, and an explicit cleanup workflow (`terraform destroy`) to avoid surprise bills.
 
@@ -38,14 +38,19 @@ terraform init
 terraform apply -auto-approve
 
 # 4. Connect to instances
-# Kali:    ssh -i ./deployer_key.pem kali@$(terraform output -raw kali_public_ip)
-# Tools:   ssh -i ./deployer_key.pem ubuntu@$(terraform output -raw tools_public_ip)
-# Windows: Retrieve password and RDP (see outputs)
+# Kali:  ssh -i ./deployer_key.pem kali@$(terraform output -raw kali_public_ip)
+# Tools: ssh -i ./deployer_key.pem ubuntu@$(terraform output -raw tools_public_ip)
+
+# Windows has no public IP — tunnel RDP through Kali (leave terminal open):
+ssh -i ./deployer_key.pem \
+  -L 13389:$(terraform output -raw windows_private_ip):3389 \
+  kali@$(terraform output -raw kali_public_ip) -N
+# Then RDP to localhost:13389 (see Windows section below)
 
 # 5. Access security tools
 # Splunk:  http://$(terraform output -raw tools_public_ip):8000
 # Nessus:  https://$(terraform output -raw tools_public_ip):8834
-````
+```
 
 ---
 
@@ -72,7 +77,7 @@ terraform apply -auto-approve
 
 ![Architecture Diagram](images/architecture-diagram.svg)
 
-Single public VPC with three EC2 hosts (Kali, Windows, Tools) in a public subnet, each secured by dedicated security groups. VPC Flow Logs are enabled to a CloudWatch log group for network visibility, and the tools instance has an IAM role for SSM and log integration.
+VPC with a public subnet (Kali, Tools) and a private subnet (Windows). Kali and Tools have public IPs restricted to the admin IP only. Windows (the victim machine) has no public IP and is reachable only from within the VPC via Kali or the tools server. Outbound internet from the private subnet routes via a NAT Gateway in the public subnet. VPC Flow Logs are enabled to a CloudWatch log group for network visibility, and the tools instance has an IAM role for SSM and log integration.
 
 ---
 
@@ -135,8 +140,8 @@ bash scripts/verify_lab.sh
 Outputs:
 
 * SSH private key location
-* Public IPs for all instances
-* Pre-formatted SSH and RDP commands
+* Public IPs for Kali and Tools; private IP for Windows
+* Pre-formatted SSH, RDP tunnel, and connection commands
 * Service URLs for Splunk and Nessus
 * Windows password retrieval command
 
@@ -199,6 +204,8 @@ The bootstrap script automatically installs:
 
 ### Windows Server 2019 (Target Machine)
 
+Windows is deployed in the **private subnet** with no public IP. All access is proxied through Kali via an SSH tunnel.
+
 **Retrieve Administrator password:**
 
 Wait 4-5 minutes after instance launch, then run:
@@ -219,16 +226,20 @@ Or use the AWS Console:
 3. Actions → Security → Get Windows Password
 4. Upload `deployer_key.pem`
 
-**Connect via RDP:**
+**Connect via RDP (through Kali tunnel):**
 
 ```bash
-# Windows/macOS: Use Microsoft Remote Desktop
-# Connect to: windows_public_ip:3389
-# Username: Administrator
-# Password: (from command above)
+# Step 1 — open SSH tunnel through Kali (leave this terminal open)
+ssh -i ./deployer_key.pem \
+  -L 13389:$(terraform output -raw windows_private_ip):3389 \
+  kali@$(terraform output -raw kali_public_ip) -N
 
-# Linux: Use Remmina or FreeRDP
-remmina -c rdp://Administrator@$(terraform output -raw windows_public_ip)
+# Step 2 — RDP to localhost in a second terminal
+# Windows/macOS: open Microsoft Remote Desktop → connect to localhost:13389
+# Linux:
+remmina -c rdp://Administrator@localhost:13389
+# Username: Administrator
+# Password: (from password retrieval step above)
 ```
 
 **Post-connection setup:**
@@ -295,7 +306,7 @@ ssh -i ./deployer_key.pem ubuntu@$(terraform output -raw tools_public_ip)
 # Change to home directory
 cd ~
 
-# Download Splunk (version may change * check splunk.com)
+# Download Splunk (version may change — check splunk.com)
 wget -O splunk.deb "https://download.splunk.com/products/splunk/releases/9.1.0/linux/splunk-9.1.0-1c86ca0bacc3-linux-2.6-amd64.deb"
 
 # Install package
@@ -374,10 +385,7 @@ server = <TOOLS_PRIVATE_IP>:9997
 
 Restart Splunk Universal Forwarder service.
 
-### Tenable Nessus
-
-
-Essentials
+### Tenable Nessus Essentials
 
 **1. Register for Nessus Essentials:**
 
@@ -427,7 +435,7 @@ Initial setup:
 2. Add targets:
 
    * Kali Linux IP (private IP from VPC)
-   * Windows Server IP (private IP from VPC)
+   * Windows Server IP (`terraform output -raw windows_private_ip`)
 3. Configure scan schedule (optional)
 4. Launch scan
 
@@ -440,14 +448,14 @@ Initial setup:
 **1. Network reconnaissance:**
 
 ```bash
-# Ping sweep
-nmap -sn 10.0.1.0/24
+# Ping sweep across the entire VPC (covers both public and private subnets)
+nmap -sn 10.0.0.0/16
 
-# Port scan Windows target
-nmap -sV -p- <windows_private_ip>
+# Port scan Windows target (use its private IP)
+nmap -sV -p- $(terraform output -raw windows_private_ip)
 
 # Service enumeration
-nmap -sC -sV <windows_private_ip>
+nmap -sC -sV $(terraform output -raw windows_private_ip)
 ```
 
 **2. Vulnerability scanning:**
@@ -597,15 +605,13 @@ rm -f ./deployer_key.pem
 
 ## Security Considerations
 
-This homelab uses a single public subnet for simplicity and cost efficiency. All instances have public IPs but restrict ingress to the admin IP only. It is intended for controlled, educational testing rather than production use. Never expose production systems without applying the hardening steps below.
+Kali and Tools are in a public subnet with public IPs restricted to the admin IP only. Windows (the victim machine) is in a private subnet with no public IP and is reachable only from within the VPC via Kali or the tools server. Outbound internet from Windows (for Windows Update and agent installs) routes via a NAT Gateway. This lab is intended for controlled, educational testing rather than production use. Never expose production systems without applying the hardening steps below.
 
 **For production, apply these hardening steps:**
 
-* Move workloads to private subnets behind a bastion or VPN
-* Use a NAT Gateway for outbound internet access
 * Replace SSH with SSM Session Manager
-* Attach IAM roles to EC2s instead of static keys
-* Protect services with ALB + TLS (ACM) and WAF
+* Attach IAM roles to all EC2s instead of static keys
+* Protect public-facing services with ALB + TLS (ACM) and WAF
 * Enable GuardDuty, Inspector, and Security Hub
 * Capture full logs: VPC Flow Logs, CloudTrail, CloudWatch
 * Encrypt with KMS, S3 policies, and EBS encryption
