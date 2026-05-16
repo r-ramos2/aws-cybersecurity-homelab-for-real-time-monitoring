@@ -30,6 +30,12 @@ variable "availability_zone" {
   default     = "us-east-1a"
 }
 
+variable "private_subnet_cidr" {
+  description = "CIDR block for the private subnet (Windows victim)"
+  type        = string
+  default     = "10.0.2.0/24"
+}
+
 # AMI Lookup
 variable "kali_ami_owner" {
   description = "Owner ID for Kali AMI"
