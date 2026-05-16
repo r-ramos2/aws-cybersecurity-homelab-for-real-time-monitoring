@@ -32,15 +32,17 @@ output "tools_instance_id" {
   value       = aws_instance.tools.id
 }
 
-# EC2 Public IPs
+# EC2 IPs
 output "kali_public_ip" {
   description = "Public IP of the Kali Linux instance"
   value       = aws_instance.kali.public_ip
 }
 
-output "windows_public_ip" {
-  description = "Public IP of the Windows Server instance"
-  value       = aws_instance.windows.public_ip
+# Windows has no public IP — it is in the private subnet.
+# Use its private IP to reach it from Kali or via the RDP tunnel below.
+output "windows_private_ip" {
+  description = "Private IP of the Windows Server instance"
+  value       = aws_instance.windows.private_ip
 }
 
 output "tools_public_ip" {
@@ -59,9 +61,16 @@ output "kali_rdp_cmd" {
   value       = "xfreerdp /u:kali /v:${aws_instance.kali.public_ip}:${var.rdp_port} /cert:ignore"
 }
 
+# Windows is in the private subnet. Open an SSH tunnel through Kali first,
+# then RDP to localhost:13389 on your machine.
+output "windows_rdp_tunnel_cmd" {
+  description = "Step 1 — open SSH tunnel through Kali to reach Windows RDP"
+  value       = "ssh -i deployer_key.pem -L 13389:${aws_instance.windows.private_ip}:${var.rdp_port} kali@${aws_instance.kali.public_ip} -N"
+}
+
 output "windows_rdp_url" {
-  description = "RDP URL for Windows Server"
-  value       = "rdp://${aws_instance.windows.public_ip}:${var.rdp_port}"
+  description = "Step 2 — RDP URL to use after the tunnel is open"
+  value       = "rdp://localhost:13389"
 }
 
 output "tools_ssh_cmd" {
