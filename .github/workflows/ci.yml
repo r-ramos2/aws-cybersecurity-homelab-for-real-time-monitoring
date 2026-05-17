@@ -6,6 +6,12 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Restrict GITHUB_TOKEN to read-only for all jobs in this workflow.
+# All three jobs (terraform validate, shellcheck, Checkov) are pure
+# read operations; write access is unnecessary and violates least-privilege.
+permissions:
+  contents: read
+
 # Cancel in-flight runs for the same branch/PR so stale jobs don't waste
 # runner minutes or produce misleading status checks.
 concurrency:
