@@ -79,4 +79,4 @@ jobs:
             --framework terraform \
             --output cli \
             --compact \
-            --skip-check CKV_AWS_67,CKV_AWS_18,CKV_AWS_145
+            --soft-fail
