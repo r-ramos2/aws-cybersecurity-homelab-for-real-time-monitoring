@@ -218,7 +218,10 @@ resource "aws_iam_role_policy" "vpc_flow_logs" {
           "logs:DescribeLogStreams",
         ]
 
-        Resource = "*"
+        Resource = [
+          aws_cloudwatch_log_group.vpc_flow_logs.arn,
+          "${aws_cloudwatch_log_group.vpc_flow_logs.arn}:log-stream:*",
+        ]
       }
     ]
   })
@@ -233,6 +236,73 @@ resource "aws_flow_log" "vpc" {
 
   tags = merge(local.common_tags, {
     Name = "${local.project_name}-vpc-flow-log"
+  })
+}
+
+# ============================================
+# 4b. CloudTrail CloudWatch Logs delivery
+# ============================================
+resource "aws_cloudwatch_log_group" "cloudtrail_cw" {
+  name              = "/aws/cloudtrail/${local.project_name}"
+  retention_in_days = 14
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-cloudtrail-cw-logs"
+  })
+}
+
+resource "aws_iam_role" "cloudtrail_cw" {
+  name = "${local.project_name}-cloudtrail-cw-role-${random_id.suffix.hex}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-cloudtrail-cw-role"
+  })
+}
+
+resource "aws_iam_role_policy" "cloudtrail_cw" {
+  name = "${local.project_name}-cloudtrail-cw-policy"
+  role = aws_iam_role.cloudtrail_cw.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+        ]
+        Resource = [
+          aws_cloudwatch_log_group.cloudtrail_cw.arn,
+          "${aws_cloudwatch_log_group.cloudtrail_cw.arn}:log-stream:*",
+        ]
+      }
+    ]
+  })
+}
+
+# ============================================
+# 4c. Tools instance CloudWatch log group
+# ============================================
+resource "aws_cloudwatch_log_group" "tools" {
+  name              = "/aws/ec2/${local.project_name}-tools"
+  retention_in_days = 14
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-tools-logs"
   })
 }
 
@@ -327,13 +397,23 @@ resource "aws_security_group" "tools_sg" {
     cidr_blocks = [var.allowed_cidr]
   }
 
-  # Splunk Forwarder
+  # Splunk Forwarder from your workstation / jump host
   ingress {
     description = "Splunk Forwarder from allowed CIDR"
     from_port   = var.splunk_forwarder_port
     to_port     = var.splunk_forwarder_port
     protocol    = "tcp"
     cidr_blocks = [var.allowed_cidr]
+  }
+
+  # Allow the Windows Universal Forwarder (private subnet) to reach Splunk.
+  # The UF connects from 10.0.2.x, not from the operator's external IP.
+  ingress {
+    description = "Splunk Forwarder from VPC (Windows UF in private subnet)"
+    from_port   = var.splunk_forwarder_port
+    to_port     = var.splunk_forwarder_port
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr_block]
   }
 
   # Nessus UI
@@ -392,6 +472,8 @@ resource "aws_iam_role" "tools_instance" {
   })
 }
 
+# SSM actions are left at Resource="*" because SSM does not support resource-
+# level permissions for most of these API calls.
 resource "aws_iam_role_policy" "tools_policy" {
   name = "${local.project_name}-tools-logs-ssm-policy"
   role = aws_iam_role.tools_instance.id
@@ -409,7 +491,10 @@ resource "aws_iam_role_policy" "tools_policy" {
           "logs:DescribeLogGroups",
           "logs:DescribeLogStreams"
         ]
-        Resource = "*"
+        Resource = [
+          aws_cloudwatch_log_group.tools.arn,
+          "${aws_cloudwatch_log_group.tools.arn}:log-stream:*",
+        ]
       },
       {
         Sid    = "AllowSSMCore"
@@ -440,6 +525,7 @@ resource "aws_iam_role_policy" "tools_policy" {
           "ec2messages:GetMessages",
           "ec2messages:SendReply"
         ]
+        # SSM does not support resource-level permissions for these actions.
         Resource = "*"
       }
     ]
@@ -579,7 +665,7 @@ resource "aws_instance" "tools" {
 }
 
 # ============================================
-# 8. CloudTrail (API audit logging to S3)
+# 8. CloudTrail (API audit logging to S3 + CloudWatch Logs)
 # ============================================
 
 resource "aws_s3_bucket" "cloudtrail_logs" {
@@ -606,6 +692,16 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail_logs" 
     apply_server_side_encryption_by_default {
       sse_algorithm = "AES256"
     }
+  }
+}
+
+# Versioning protects log integrity — deleted or overwritten objects can be
+# recovered, satisfying tamper-evidence requirements for audit logs.
+resource "aws_s3_bucket_versioning" "cloudtrail_logs" {
+  bucket = aws_s3_bucket.cloudtrail_logs.id
+
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
@@ -652,7 +748,16 @@ resource "aws_cloudtrail" "lab" {
   is_multi_region_trail         = false
   enable_log_file_validation    = true
 
-  depends_on = [aws_s3_bucket_policy.cloudtrail_logs]
+  # Deliver CloudTrail events to CloudWatch Logs for real-time monitoring.
+  # Metric filters and alarms can fire on API events within seconds; S3
+  # delivery has no guaranteed latency SLA and is not suitable for alerting.
+  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail_cw.arn}:*"
+  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_cw.arn
+
+  depends_on = [
+    aws_s3_bucket_policy.cloudtrail_logs,
+    aws_iam_role_policy.cloudtrail_cw,
+  ]
 
   tags = merge(local.common_tags, {
     Name = "${local.project_name}-cloudtrail"
