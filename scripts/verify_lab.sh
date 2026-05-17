@@ -9,7 +9,7 @@ set -euo pipefail
 #   - AWS CLI configured with the same profile/region used by Terraform
 #   - Terraform state available in ./terraform
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}">)/.." && pwd)"
 TF_DIR="${ROOT_DIR}/terraform"
 
 PASS=0
@@ -171,6 +171,51 @@ if [ -n "$S3_BUCKET" ] && [ "$S3_BUCKET" != "null" ]; then
 else
   _warn "No 'logs_bucket_name' Terraform output found; skipping S3 encryption check"
 fi
+
+# ── IMDSv2 enforcement ────────────────────────────────────────────────────────
+# Confirms http_tokens=required survived launch and was not overridden.
+# IMDSv2 prevents SSRF attacks from reaching the instance metadata endpoint.
+echo ""
+_info "Checking IMDSv2 enforcement (HttpTokens=required)..."
+for INST_ID in "$KALI_ID" "$WIN_ID" "$TOOLS_ID"; do
+  TOKEN_STATE=$(aws ec2 describe-instances \
+    --instance-ids "$INST_ID" \
+    --query 'Reservations[0].Instances[0].MetadataOptions.HttpTokens' \
+    --output text 2>/dev/null || true)
+  if [ "$TOKEN_STATE" = "required" ]; then
+    _pass "Instance ${INST_ID}: IMDSv2 enforced (HttpTokens=required)"
+  else
+    _fail "Instance ${INST_ID}: IMDSv2 not enforced (HttpTokens=${TOKEN_STATE})"
+  fi
+done
+
+# ── EBS root volume encryption ────────────────────────────────────────────────
+# Confirms each root volume is encrypted — an unencrypted root volume leaks
+# credentials and keys if the volume is snapshotted or detached.
+echo ""
+_info "Checking EBS root volume encryption..."
+for INST_ID in "$KALI_ID" "$WIN_ID" "$TOOLS_ID"; do
+  VOL_ID=$(aws ec2 describe-instances \
+    --instance-ids "$INST_ID" \
+    --query 'Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId' \
+    --output text 2>/dev/null || true)
+
+  if [ -z "$VOL_ID" ] || [ "$VOL_ID" = "None" ]; then
+    _warn "Instance ${INST_ID}: unable to determine root EBS volume ID"
+    continue
+  fi
+
+  VOL_ENC=$(aws ec2 describe-volumes \
+    --volume-ids "$VOL_ID" \
+    --query 'Volumes[0].Encrypted' \
+    --output text 2>/dev/null || true)
+
+  if [ "$VOL_ENC" = "True" ]; then
+    _pass "Instance ${INST_ID}: root EBS volume ${VOL_ID} is encrypted"
+  else
+    _fail "Instance ${INST_ID}: root EBS volume ${VOL_ID} is NOT encrypted"
+  fi
+done
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo ""
