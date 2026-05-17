@@ -9,8 +9,8 @@ export DEBIAN_FRONTEND=noninteractive
 # Environment variables:
 #   SPLUNK_ADMIN_PASS     Admin password (required)
 #   SPLUNK_ADMIN_USER     Admin username (default: admin)
-#   SPLUNK_VERSION        Package version (default: 9.1.0)
-#   SPLUNK_BUILD          Build hash (default: 1c86ca0bacc3)
+#   SPLUNK_VERSION        Package version (default: 9.3.2)
+#   SPLUNK_BUILD          Build hash (default: d8ae995bf219)
 #   SPLUNK_SHA256         Expected SHA256 of the .deb file (recommended)
 
 # ── Root check ────────────────────────────────────────────────────────────────
