@@ -47,8 +47,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.2
 
-      # Pinned to a specific SHA for supply-chain integrity, consistent with
-      # the pinned version approach used for all other actions in this workflow.
+      # Pinned to a specific version for supply-chain consistency —
+      # matches the pinned-version approach used for all other actions
+      # in this workflow. scandir covers all four scripts automatically.
       - name: ShellCheck
         uses: ludeeus/action-shellcheck@2.0.0
         with:
