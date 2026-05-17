@@ -39,8 +39,19 @@ fi
 
 # Validate password complexity
 if [[ ${#SPLUNK_ADMIN_PASS} -lt 8 ]]; then
-  echo "[ERROR] Password must be at least 8 characters long"
-  exit 1
+  echo "[ERROR] Password must be at least 8 characters long"; exit 1
+fi
+if ! [[ "$SPLUNK_ADMIN_PASS" =~ [A-Z] ]]; then
+  echo "[ERROR] Password must contain at least 1 uppercase letter"; exit 1
+fi
+if ! [[ "$SPLUNK_ADMIN_PASS" =~ [a-z] ]]; then
+  echo "[ERROR] Password must contain at least 1 lowercase letter"; exit 1
+fi
+if ! [[ "$SPLUNK_ADMIN_PASS" =~ [0-9] ]]; then
+  echo "[ERROR] Password must contain at least 1 number"; exit 1
+fi
+if ! [[ "$SPLUNK_ADMIN_PASS" =~ [^a-zA-Z0-9] ]]; then
+  echo "[ERROR] Password must contain at least 1 special character"; exit 1
 fi
 
 echo "[INFO] Installing system dependencies..."
