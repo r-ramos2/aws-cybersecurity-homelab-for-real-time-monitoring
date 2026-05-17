@@ -5,71 +5,76 @@ export DEBIAN_FRONTEND=noninteractive
 # splunk_setup.sh
 # Installs Splunk Enterprise on Ubuntu/Debian hosts (non-interactive)
 # Creates admin user and enables boot-start
+#
+# Environment variables:
+#   SPLUNK_ADMIN_PASS     Admin password (required)
+#   SPLUNK_ADMIN_USER     Admin username (default: admin)
+#   SPLUNK_VERSION        Package version (default: 9.1.0)
+#   SPLUNK_BUILD          Build hash (default: 1c86ca0bacc3)
+#   SPLUNK_SHA256         Expected SHA256 of the .deb file (recommended)
 
-# Version configuration - UPDATE THESE VARIABLES FOR NEW RELEASES
+# ── Root check ────────────────────────────────────────────────────────────────
+if [ "$EUID" -ne 0 ]; then
+  echo "[ERROR] This script must be run as root (sudo)."
+  exit 1
+fi
+
+# ── Configuration ─────────────────────────────────────────────────────────────
 SPLUNK_VERSION="${SPLUNK_VERSION:-9.1.0}"
 SPLUNK_BUILD="${SPLUNK_BUILD:-1c86ca0bacc3}"
 SPLUNK_PKG="splunk-${SPLUNK_VERSION}-${SPLUNK_BUILD}-linux-2.6-amd64.deb"
 SPLUNK_DOWNLOAD_URL="https://download.splunk.com/products/splunk/releases/${SPLUNK_VERSION}/linux/${SPLUNK_PKG}"
-
-# CRITICAL: Set these via environment variables before running
-# Example: SPLUNK_ADMIN_PASS='YourSecureP@ssw0rd!' bash splunk_setup.sh
 SPLUNK_ADMIN_USER="${SPLUNK_ADMIN_USER:-admin}"
 SPLUNK_ADMIN_PASS="${SPLUNK_ADMIN_PASS:-}"
+SPLUNK_SHA256="${SPLUNK_SHA256:-}"
+SEED_CONF="/opt/splunk/etc/system/local/user-seed.conf"
 
 echo "[INFO] Splunk Enterprise Setup Script"
 echo "[INFO] Version: ${SPLUNK_VERSION}"
 echo "=========================================="
 
-# Validate password is set
+# ── Password validation ───────────────────────────────────────────────────────
 if [ -z "$SPLUNK_ADMIN_PASS" ]; then
-  echo "[ERROR] SPLUNK_ADMIN_PASS environment variable not set!"
+  echo "[ERROR] SPLUNK_ADMIN_PASS is not set."
   echo ""
   echo "Usage:"
-  echo "  SPLUNK_ADMIN_PASS='YourSecureP@ssw0rd!' bash splunk_setup.sh"
+  echo "  SPLUNK_ADMIN_PASS='StrongP@ss123!' bash splunk_setup.sh"
   echo ""
-  echo "Password requirements:"
-  echo "  - Minimum 8 characters"
-  echo "  - At least 1 uppercase letter"
-  echo "  - At least 1 lowercase letter"
-  echo "  - At least 1 number"
-  echo "  - At least 1 special character"
+  echo "Password requirements: 8+ chars, upper, lower, digit, special character"
   exit 1
 fi
 
-# Validate password complexity
 if [[ ${#SPLUNK_ADMIN_PASS} -lt 8 ]]; then
-  echo "[ERROR] Password must be at least 8 characters long"; exit 1
+  echo "[ERROR] Password must be at least 8 characters."; exit 1
 fi
 if ! [[ "$SPLUNK_ADMIN_PASS" =~ [A-Z] ]]; then
-  echo "[ERROR] Password must contain at least 1 uppercase letter"; exit 1
+  echo "[ERROR] Password must contain at least 1 uppercase letter."; exit 1
 fi
 if ! [[ "$SPLUNK_ADMIN_PASS" =~ [a-z] ]]; then
-  echo "[ERROR] Password must contain at least 1 lowercase letter"; exit 1
+  echo "[ERROR] Password must contain at least 1 lowercase letter."; exit 1
 fi
 if ! [[ "$SPLUNK_ADMIN_PASS" =~ [0-9] ]]; then
-  echo "[ERROR] Password must contain at least 1 number"; exit 1
+  echo "[ERROR] Password must contain at least 1 number."; exit 1
 fi
 if ! [[ "$SPLUNK_ADMIN_PASS" =~ [^a-zA-Z0-9] ]]; then
-  echo "[ERROR] Password must contain at least 1 special character"; exit 1
+  echo "[ERROR] Password must contain at least 1 special character."; exit 1
 fi
 
+# ── Dependencies ──────────────────────────────────────────────────────────────
 echo "[INFO] Installing system dependencies..."
 apt-get update
 apt-get install -y wget curl
 
-# Work in /tmp
+# ── Download ──────────────────────────────────────────────────────────────────
 cd /tmp
 
-# Download Splunk if not present
 if [ ! -f "$SPLUNK_PKG" ]; then
   echo "[INFO] Downloading Splunk Enterprise..."
-  echo "[INFO] This may take several minutes depending on your connection..."
-  
+  echo "[INFO] This may take several minutes..."
+
   DOWNLOAD_SUCCESS=0
   for i in {1..3}; do
     if wget --progress=bar:force:noscroll "$SPLUNK_DOWNLOAD_URL" -O "$SPLUNK_PKG"; then
-      echo "[INFO] Splunk package downloaded successfully."
       DOWNLOAD_SUCCESS=1
       break
     fi
@@ -79,19 +84,14 @@ if [ ! -f "$SPLUNK_PKG" ]; then
 
   if [ $DOWNLOAD_SUCCESS -eq 0 ]; then
     echo "[ERROR] Failed to download Splunk after 3 attempts."
-    echo ""
-    echo "Troubleshooting:"
-    echo "  1. Verify internet connectivity: ping -c 3 8.8.8.8"
-    echo "  2. Check if version ${SPLUNK_VERSION} exists at:"
-    echo "     https://www.splunk.com/en_us/download/splunk-enterprise.html"
-    echo "  3. Update SPLUNK_VERSION and SPLUNK_BUILD variables in this script"
-    echo "  4. Manually download and place in /tmp/"
+    echo "  1. Check connectivity: ping -c 3 8.8.8.8"
+    echo "  2. Verify version at: https://www.splunk.com/en_us/download/splunk-enterprise.html"
+    echo "  3. Update SPLUNK_VERSION / SPLUNK_BUILD and retry"
     exit 1
   fi
-  
-  # Verify downloaded file is not corrupt
+
   if [ ! -s "$SPLUNK_PKG" ]; then
-    echo "[ERROR] Downloaded file is empty or corrupt"
+    echo "[ERROR] Downloaded file is empty."
     rm -f "$SPLUNK_PKG"
     exit 1
   fi
@@ -99,103 +99,125 @@ else
   echo "[INFO] Splunk package already present."
 fi
 
-# Install package
+# ── SHA256 verification ───────────────────────────────────────────────────────
+if [ -n "$SPLUNK_SHA256" ]; then
+  echo "[INFO] Verifying SHA256 checksum..."
+  ACTUAL_SHA256=$(sha256sum "$SPLUNK_PKG" | awk '{print $1}')
+  if [ "$ACTUAL_SHA256" != "$SPLUNK_SHA256" ]; then
+    echo "[ERROR] SHA256 mismatch! Package may be corrupt or tampered."
+    echo "  Expected: ${SPLUNK_SHA256}"
+    echo "  Actual:   ${ACTUAL_SHA256}"
+    rm -f "$SPLUNK_PKG"
+    exit 1
+  fi
+  echo "[INFO] SHA256 checksum verified."
+else
+  echo "[WARN] SPLUNK_SHA256 not set. Skipping checksum verification."
+  echo "[WARN] Supply SPLUNK_SHA256 from https://www.splunk.com/en_us/download/splunk-enterprise.html"
+fi
+
+# ── Install ───────────────────────────────────────────────────────────────────
 echo "[INFO] Installing Splunk Enterprise..."
 if ! dpkg -i "$SPLUNK_PKG"; then
-  echo "[WARN] dpkg reported missing dependencies; attempting to fix..."
+  echo "[WARN] Missing dependencies; attempting to resolve..."
   apt-get update
   apt-get install -f -y
-  
-  # Retry installation
   if ! dpkg -i "$SPLUNK_PKG"; then
-    echo "[ERROR] Splunk installation failed after dependency fix"
+    echo "[ERROR] Splunk installation failed after dependency fix."
     exit 1
   fi
 fi
 
-# Verify installation directory exists
 if [ ! -d "/opt/splunk" ]; then
-  echo "[ERROR] Splunk installation directory not found!"
+  echo "[ERROR] /opt/splunk not found after install."
   exit 1
 fi
 
-# Create user-seed.conf for non-interactive setup
-echo "[INFO] Configuring admin user..."
-mkdir -p /opt/splunk/etc/system/local
-cat > /opt/splunk/etc/system/local/user-seed.conf << EOF
+# ── Admin user seed ───────────────────────────────────────────────────────────
+# user-seed.conf is read once on first start then should be deleted.
+echo "[INFO] Writing admin credentials seed file..."
+mkdir -p "$(dirname "$SEED_CONF")"
+cat > "$SEED_CONF" << EOF
 [user_info]
 USERNAME = ${SPLUNK_ADMIN_USER}
 PASSWORD = ${SPLUNK_ADMIN_PASS}
 EOF
+chmod 400 "$SEED_CONF"
 
-chmod 400 /opt/splunk/etc/system/local/user-seed.conf
-
-# Start Splunk and accept license
-echo "[INFO] Starting Splunk Enterprise..."
-echo "[INFO] First start may take 1-2 minutes..."
-if ! /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt; then
-  echo "[ERROR] Failed to start Splunk"
-  echo "[INFO] Check logs at: /opt/splunk/var/log/splunk/"
+# ── First start ───────────────────────────────────────────────────────────────
+echo "[INFO] Starting Splunk (first start, accepting license)..."
+if ! /opt/splunk/bin/splunk start \
+    --accept-license --answer-yes --no-prompt; then
+  echo "[ERROR] Failed to start Splunk."
+  echo "  Logs: /opt/splunk/var/log/splunk/"
   exit 1
 fi
 
-# Enable boot-start
-echo "[INFO] Enabling Splunk to start at boot..."
-/opt/splunk/bin/splunk enable boot-start -user splunk --accept-license --answer-yes
+# ── Delete seed file immediately after first start ────────────────────────────
+# user-seed.conf contains a plaintext password and is no longer needed
+# once Splunk has written the hashed credentials to passwd.
+echo "[INFO] Removing plaintext credential seed file..."
+rm -f "$SEED_CONF"
+echo "[INFO] user-seed.conf deleted."
 
-# Wait for Splunk to be fully operational
-echo "[INFO] Waiting for Splunk services to be ready..."
-sleep 10
+# ── Boot-start ────────────────────────────────────────────────────────────────
+echo "[INFO] Enabling boot-start..."
+/opt/splunk/bin/splunk enable boot-start \
+  --accept-license --answer-yes
 
-# Configure receiving port for forwarders
-echo "[INFO] Enabling data receiving on port 9997..."
-if ! /opt/splunk/bin/splunk enable listen 9997 -auth "${SPLUNK_ADMIN_USER}":"${SPLUNK_ADMIN_PASS}"; then
-  echo "[WARN] Failed to enable listening port. You may need to configure this manually."
-fi
+# ── Receiving port via conf file ──────────────────────────────────────────────
+# Configure the forwarder receiving port via inputs.conf instead of CLI to
+# avoid exposing credentials in the process list (visible to `ps`).
+echo "[INFO] Enabling forwarder receiving port 9997 via inputs.conf..."
+INPUTS_CONF="/opt/splunk/etc/system/local/inputs.conf"
+cat > "$INPUTS_CONF" << EOF
+[splunktcp://9997]
+disabled = false
+EOF
+chmod 640 "$INPUTS_CONF"
+echo "[INFO] Receiving port 9997 configured."
 
-# Restart to apply all configs
-echo "[INFO] Restarting Splunk to apply configurations..."
+# ── Restart to apply configs ──────────────────────────────────────────────────
+echo "[INFO] Restarting Splunk..."
 /opt/splunk/bin/splunk restart
 
-# Wait for restart
-echo "[INFO] Waiting for Splunk to restart..."
+echo "[INFO] Waiting for Splunk to be ready..."
 sleep 15
 
-# Verify Splunk is running
-if /opt/splunk/bin/splunk status | grep -q "splunkd is running"; then
-  echo ""
-  echo "=========================================="
-  echo "[SUCCESS] Splunk Enterprise is running!"
-  echo "=========================================="
-else
-  echo ""
-  echo "[WARN] Splunk may not be fully started yet. Check status with:"
-  echo "  /opt/splunk/bin/splunk status"
-fi
-
-# Display access info
-IP_ADDR=$(hostname -I | awk '{print $1}')
-if [ -n "$IP_ADDR" ]; then
-  echo ""
-  echo "Access Information:"
-  echo "  Web UI:  http://$IP_ADDR:8000"
-  echo "  Username: ${SPLUNK_ADMIN_USER}"
-  echo "  Password: (set via environment variable)"
-  echo ""
-  echo "Forwarder Configuration:"
-  echo "  Receiving Port: 9997"
-  echo "  Server Address: ${IP_ADDR}:9997"
-  echo ""
-else
-  echo "[INFO] Splunk installed. Access at http://<TOOLS_PUBLIC_IP>:8000"
-fi
-
-echo "=========================================="
-echo "[INFO] Splunk setup complete."
+# ── HTTPS advisory ────────────────────────────────────────────────────────────
 echo ""
-echo "Next Steps:"
-echo "  1. Access Splunk Web UI and complete initial setup"
-echo "  2. Create indexes for your data (Settings -> Indexes)"
-echo "  3. Configure forwarders to send data to ${IP_ADDR}:9997"
-echo "  4. Review security settings and enable HTTPS"
+echo "[WARN] Splunk Web UI is running over HTTP (port 8000) by default."
+echo "[WARN] To enable HTTPS, run:"
+echo "         /opt/splunk/bin/splunk set web-ssl on"
+echo "         /opt/splunk/bin/splunk restart"
+echo "[WARN] Or configure a TLS-terminating reverse proxy in front of port 8000."
+
+# ── Status check ─────────────────────────────────────────────────────────────
+if /opt/splunk/bin/splunk status | grep -q "splunkd is running"; then
+  SPLUNK_RUNNING=1
+else
+  SPLUNK_RUNNING=0
+fi
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+IP_ADDR=$(hostname -I | awk '{print $1}')
+echo ""
+echo "=========================================="
+if [ $SPLUNK_RUNNING -eq 1 ]; then
+  echo "[SUCCESS] Splunk Enterprise is running."
+else
+  echo "[WARN] Splunk may still be starting. Check: /opt/splunk/bin/splunk status"
+fi
+echo "=========================================="
+echo ""
+echo "Web UI:           http://${IP_ADDR:-<TOOLS_IP>}:8000  (HTTP - see HTTPS warning above)"
+echo "Username:         ${SPLUNK_ADMIN_USER}"
+echo "Receiving port:   9997"
+echo "Forwarder target: ${IP_ADDR:-<TOOLS_IP>}:9997"
+echo ""
+echo "Next steps:"
+echo "  1. Enable HTTPS (see warning above)"
+echo "  2. Create indexes: Settings -> Indexes"
+echo "  3. Point forwarders at ${IP_ADDR:-<TOOLS_IP>}:9997"
+echo "  4. Review Settings -> Server controls -> Security"
 echo "=========================================="
