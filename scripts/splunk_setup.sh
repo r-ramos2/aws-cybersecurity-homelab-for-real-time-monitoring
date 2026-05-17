@@ -20,8 +20,12 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-SPLUNK_VERSION="${SPLUNK_VERSION:-9.1.0}"
-SPLUNK_BUILD="${SPLUNK_BUILD:-1c86ca0bacc3}"
+# Check https://www.splunk.com/en_us/download/splunk-enterprise.html for the
+# latest version string and build hash before deploying. The defaults below
+# are known-good but will become outdated; using a stale build installs an
+# unpatched binary on first deploy.
+SPLUNK_VERSION="${SPLUNK_VERSION:-9.3.2}"
+SPLUNK_BUILD="${SPLUNK_BUILD:-d8ae995bf219}"
 SPLUNK_PKG="splunk-${SPLUNK_VERSION}-${SPLUNK_BUILD}-linux-2.6-amd64.deb"
 SPLUNK_DOWNLOAD_URL="https://download.splunk.com/products/splunk/releases/${SPLUNK_VERSION}/linux/${SPLUNK_PKG}"
 SPLUNK_ADMIN_USER="${SPLUNK_ADMIN_USER:-admin}"
