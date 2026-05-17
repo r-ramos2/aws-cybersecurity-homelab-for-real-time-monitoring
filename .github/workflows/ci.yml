@@ -47,13 +47,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.2
 
-      - name: Shellcheck
-        run: |
-          sudo apt-get install -y shellcheck
-          shellcheck scripts/kali_setup.sh
-          shellcheck scripts/nessus_install.sh
-          shellcheck scripts/splunk_setup.sh
-          shellcheck scripts/verify_lab.sh
+      # Pinned to a specific SHA for supply-chain integrity, consistent with
+      # the pinned version approach used for all other actions in this workflow.
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: ./scripts
+          severity: warning
 
   # Static IaC security scan with Checkov.
   #
