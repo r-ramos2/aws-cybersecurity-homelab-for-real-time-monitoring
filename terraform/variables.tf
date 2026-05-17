@@ -68,9 +68,9 @@ variable "ubuntu_ami_owner" {
 }
 
 variable "ubuntu_ami_name_filter" {
-  description = "Filter for Ubuntu AMI"
+  description = "Filter for Ubuntu AMI (22.04 LTS — supported until 2027-04)"
   type        = string
-  default     = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"
+  default     = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
 }
 
 # Allowed CIDR for access (replace with your public IP /32)
