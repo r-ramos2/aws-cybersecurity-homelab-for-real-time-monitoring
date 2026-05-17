@@ -15,8 +15,8 @@ TF_DIR="${ROOT_DIR}/terraform"
 PASS=0
 FAIL=0
 
-_pass() { echo "[PASS] $*"; (( PASS++ )); }
-_fail() { echo "[FAIL] $*"; (( FAIL++ )); }
+_pass() { echo "[PASS] $*"; PASS=$(( PASS + 1 )); }
+_fail() { echo "[FAIL] $*"; FAIL=$(( FAIL + 1 )); }
 _info() { echo "[INFO] $*"; }
 _warn() { echo "[WARN] $*"; }
 
@@ -53,13 +53,13 @@ STATES=$(aws ec2 describe-instances \
   --query 'Reservations[].Instances[].[InstanceId,State.Name]' \
   --output text)
 
-echo "$STATES" | while read -r id state; do
+while read -r id state; do
   if [ "$state" = "running" ]; then
     _pass "Instance ${id}: ${state}"
   else
     _fail "Instance ${id}: ${state} (expected: running)"
   fi
-done
+done < <(echo "$STATES")
 
 # ── VPC Flow Logs ─────────────────────────────────────────────────────────────
 echo ""
