@@ -16,6 +16,11 @@ output "tools_instance_profile_name" {
   value       = aws_iam_instance_profile.tools.name
 }
 
+output "logs_bucket_name" {
+  description = "S3 bucket name for CloudTrail logs"
+  value       = aws_s3_bucket.cloudtrail_logs.id
+}
+
 # EC2 Instance IDs
 output "kali_instance_id" {
   description = "Instance ID of Kali Linux"
@@ -57,8 +62,8 @@ output "kali_ssh_cmd" {
 }
 
 output "kali_rdp_cmd" {
-  description = "RDP command to connect to Kali Linux (XFCE desktop)"
-  value       = "xfreerdp /u:kali /v:${aws_instance.kali.public_ip}:${var.rdp_port} /cert:ignore"
+  description = "RDP command to connect to Kali Linux (XFCE desktop) — /cert:tofu trusts the cert on first use instead of ignoring it permanently"
+  value       = "xfreerdp /u:rdpuser /v:${aws_instance.kali.public_ip}:${var.rdp_port} /cert:tofu"
 }
 
 # Windows is in the private subnet. Open an SSH tunnel through Kali first,
