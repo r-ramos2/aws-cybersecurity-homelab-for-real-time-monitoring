@@ -177,20 +177,23 @@ EOF
 chmod 640 "$INPUTS_CONF"
 echo "[INFO] Receiving port 9997 configured."
 
+# ── Enable HTTPS on Splunk Web UI ─────────────────────────────────────────────
+# Written via web.conf to avoid passing credentials on the CLI (visible in ps).
+echo "[INFO] Enabling HTTPS on Splunk Web UI..."
+WEB_CONF="/opt/splunk/etc/system/local/web.conf"
+cat > "$WEB_CONF" << EOF
+[settings]
+enableSplunkWebSSL = true
+EOF
+chmod 640 "$WEB_CONF"
+echo "[INFO] HTTPS enabled via web.conf."
+
 # ── Restart to apply configs ──────────────────────────────────────────────────
 echo "[INFO] Restarting Splunk..."
 /opt/splunk/bin/splunk restart
 
 echo "[INFO] Waiting for Splunk to be ready..."
 sleep 15
-
-# ── HTTPS advisory ────────────────────────────────────────────────────────────
-echo ""
-echo "[WARN] Splunk Web UI is running over HTTP (port 8000) by default."
-echo "[WARN] To enable HTTPS, run:"
-echo "         /opt/splunk/bin/splunk set web-ssl on"
-echo "         /opt/splunk/bin/splunk restart"
-echo "[WARN] Or configure a TLS-terminating reverse proxy in front of port 8000."
 
 # ── Status check ─────────────────────────────────────────────────────────────
 if /opt/splunk/bin/splunk status | grep -q "splunkd is running"; then
@@ -210,13 +213,13 @@ else
 fi
 echo "=========================================="
 echo ""
-echo "Web UI:           http://${IP_ADDR:-<TOOLS_IP>}:8000  (HTTP - see HTTPS warning above)"
+echo "Web UI:           https://${IP_ADDR:-<TOOLS_IP>}:8000  (HTTPS — self-signed cert)"
 echo "Username:         ${SPLUNK_ADMIN_USER}"
 echo "Receiving port:   9997"
 echo "Forwarder target: ${IP_ADDR:-<TOOLS_IP>}:9997"
 echo ""
 echo "Next steps:"
-echo "  1. Enable HTTPS (see warning above)"
+echo "  1. Accept the self-signed cert warning in your browser"
 echo "  2. Create indexes: Settings -> Indexes"
 echo "  3. Point forwarders at ${IP_ADDR:-<TOOLS_IP>}:9997"
 echo "  4. Review Settings -> Server controls -> Security"
