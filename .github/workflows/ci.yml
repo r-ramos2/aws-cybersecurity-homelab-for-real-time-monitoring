@@ -50,8 +50,7 @@ jobs:
           shellcheck scripts/verify_lab.sh
 
   # Static IaC security scan with Checkov against CIS/NIST rule sets.
-  # Uses the official bridgecrewio/checkov-action (pre-built, no pip install)
-  # so the job completes in seconds rather than minutes.
+  # pip cache keyed on requirements.txt keeps subsequent runs under 30s.
   #
   # Skipped checks -- intentional lab trade-offs, not oversights:
   #   CKV_AWS_67  -- CloudTrail is single-region (multi-region adds cost; lab scope)
@@ -64,12 +63,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkov scan (Terraform)
-        uses: bridgecrewio/checkov-action@v12
+      - uses: actions/setup-python@v5
         with:
-          directory: terraform
-          framework: terraform
-          output_format: cli
-          compact: true
-          soft_fail: false
-          skip_check: CKV_AWS_67,CKV_AWS_18,CKV_AWS_145
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Checkov
+        run: pip install checkov --quiet
+
+      - name: Checkov scan (Terraform)
+        run: |
+          checkov \
+            --directory terraform \
+            --framework terraform \
+            --output cli \
+            --compact \
+            --skip-check CKV_AWS_67,CKV_AWS_18,CKV_AWS_145
