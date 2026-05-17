@@ -25,7 +25,8 @@ terraform {
     aws    = { source = "hashicorp/aws", version = "~> 5.0" }
     tls    = { source = "hashicorp/tls", version = "~> 4.0" }
     random = { source = "hashicorp/random", version = "~> 3.0" }
-    local  = { source = "hashicorp/local", version = "~> 2.0" }
+    # local provider removed — no local_file resources are used in this module.
+    # Add it back if you need to write the SSH key to disk via local_sensitive_file.
   }
 }
 
