@@ -12,9 +12,9 @@ jobs:
       run:
         working-directory: terraform
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3.1.2
         with:
           terraform_version: 1.5.7
 
@@ -30,7 +30,7 @@ jobs:
   scripts:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Shellcheck
         run: |
