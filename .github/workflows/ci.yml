@@ -57,14 +57,24 @@ jobs:
 
   # Static IaC security scan with Checkov.
   #
-  # The scan runs in soft-fail mode so findings are reported in CI output
-  # without blocking merges. This keeps visibility high while allowing
-  # intentional homelab trade-offs to remain documented and reviewable.
+  # Runs in hard-fail mode. Only intentional homelab trade-offs are skipped,
+  # each with an explicit rationale below. Any other HIGH/CRITICAL finding
+  # will break the build.
   #
-  # Examples of accepted lab trade-offs:
-  #   CKV_AWS_67  -- CloudTrail is single-region (multi-region adds cost)
-  #   CKV_AWS_18  -- S3 access logging disabled for the logging bucket
-  #   CKV_AWS_145 -- SSE-S3 used instead of a customer-managed KMS key
+  # Skipped checks and rationale:
+  #   CKV_AWS_67   -- CloudTrail single-region: multi-region trail doubles
+  #                   cost with no benefit in a single-account homelab.
+  #   CKV_AWS_18   -- S3 access logging disabled on the CloudTrail bucket:
+  #                   logging a logging bucket creates recursive churn.
+  #   CKV_AWS_86   -- Same S3 access logging check, different rule ID.
+  #   CKV_AWS_145  -- SSE-S3 instead of CMK: KMS adds ~$1/month per key;
+  #                   AES256 is sufficient for a lab environment.
+  #   CKV_AWS_144  -- No S3 cross-region replication: single-region lab.
+  #   CKV2_AWS_61  -- No S3 lifecycle policy: bucket is destroyed on teardown.
+  #   CKV2_AWS_62  -- No S3 event notifications: not needed for audit logs.
+  #   CKV_AWS_130  -- Public subnet assigns public IPs: required for Kali
+  #                   and Tools instances (direct SSH / browser access).
+  #   CKV2_AWS_11  -- No VPC endpoints: out of scope for a homelab.
   security-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -86,4 +96,4 @@ jobs:
             --framework terraform \
             --output cli \
             --compact \
-            --soft-fail
+            --skip-check CKV_AWS_67,CKV_AWS_18,CKV_AWS_86,CKV_AWS_145,CKV_AWS_144,CKV2_AWS_61,CKV2_AWS_62,CKV_AWS_130,CKV2_AWS_11
