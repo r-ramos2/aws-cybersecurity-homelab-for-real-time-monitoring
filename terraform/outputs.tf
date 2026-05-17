@@ -85,8 +85,8 @@ output "tools_ssh_cmd" {
 
 # Service URLs on Tools server
 output "splunk_url" {
-  description = "Splunk Web UI URL"
-  value       = "http://${aws_instance.tools.public_ip}:${var.splunk_web_port}"
+  description = "Splunk Web UI URL (HTTPS — self-signed cert, accept browser warning)"
+  value       = "https://${aws_instance.tools.public_ip}:${var.splunk_web_port}"
 }
 
 output "nessus_url" {
