@@ -485,7 +485,6 @@ resource "aws_iam_role_policy" "tools_policy" {
         Sid    = "AllowCloudWatchLogs"
         Effect = "Allow"
         Action = [
-          "logs:CreateLogGroup",
           "logs:CreateLogStream",
           "logs:PutLogEvents",
           "logs:DescribeLogGroups",
