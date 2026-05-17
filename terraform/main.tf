@@ -551,7 +551,6 @@ resource "aws_iam_instance_profile" "tools" {
 # ============================================
 
 # Kali — attacker, stays public (needs internet for tools; you SSH in directly)
-# Kali — attacker, stays public (needs internet for tools; you SSH in directly)
 resource "aws_instance" "kali" {
   #checkov:skip=CKV2_AWS_41: Attacker VM uses SSH key auth; no SSM role required.
   ami                         = data.aws_ami.kali.id
