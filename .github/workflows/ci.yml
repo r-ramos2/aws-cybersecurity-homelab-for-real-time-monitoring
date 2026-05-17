@@ -39,3 +39,23 @@ jobs:
           shellcheck scripts/nessus_install.sh
           shellcheck scripts/splunk_setup.sh
           shellcheck scripts/verify_lab.sh
+
+  # Static IaC security scan with Checkov. Checks for misconfigurations
+  # against CIS/NIST rule sets. --soft-fail keeps CI green while surfacing
+  # findings; remove it to block the pipeline on failures.
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Install Checkov
+        run: pip install checkov --quiet
+
+      - name: Checkov scan (Terraform)
+        run: |
+          checkov \
+            --directory terraform \
+            --framework terraform \
+            --output cli \
+            --compact \
+            --soft-fail
