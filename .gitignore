@@ -1,6 +1,5 @@
 # Terraform local state
 .terraform/
-.terraform.lock.hcl
 terraform.tfstate
 terraform.tfstate.*
 
@@ -12,4 +11,3 @@ deployer_key.pem
 
 # OS cruft
 .DS_Store
-
