@@ -26,7 +26,7 @@ jobs:
       run:
         working-directory: terraform
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
       - name: Shellcheck
         run: |
@@ -64,7 +64,7 @@ jobs:
   # Skipped checks and rationale:
   #   CKV_AWS_67   -- CloudTrail single-region: multi-region trail doubles
   #                   cost with no benefit in a single-account homelab.
-  #   CKV_AWS_18   -- S3 access logging disabled on the CloudTrail bucket:
+  #   CKV_AWS_18   -- S3 access logging on CloudTrail bucket disabled:
   #                   logging a logging bucket creates recursive churn.
   #   CKV_AWS_86   -- Same S3 access logging check, different rule ID.
   #   CKV_AWS_145  -- SSE-S3 instead of CMK: KMS adds ~$1/month per key;
@@ -75,13 +75,23 @@ jobs:
   #   CKV_AWS_130  -- Public subnet assigns public IPs: required for Kali
   #                   and Tools instances (direct SSH / browser access).
   #   CKV2_AWS_11  -- No VPC endpoints: out of scope for a homelab.
+  #   CKV_AWS_88   -- Public IPs on Kali and Tools: intentional; both
+  #                   require direct internet-facing access.
+  #   CKV_AWS_382  -- Unrestricted egress: lab instances need outbound
+  #                   internet for package updates and tool downloads.
+  #   CKV_AWS_35   -- CloudTrail not KMS-encrypted: S3 SSE-S3 (AES256)
+  #                   is sufficient; CMK adds unnecessary cost.
+  #   CKV_AWS_158  -- CloudWatch log groups not KMS-encrypted: same
+  #                   cost rationale as CKV_AWS_35.
+  #   CKV_AWS_252  -- No CloudTrail SNS topic: real-time alerting is
+  #                   handled via CloudWatch metric filters instead.
   security-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.2
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5.4.0
         with:
           python-version: "3.13"
           cache: pip
@@ -96,4 +106,4 @@ jobs:
             --framework terraform \
             --output cli \
             --compact \
-            --skip-check CKV_AWS_67,CKV_AWS_18,CKV_AWS_86,CKV_AWS_145,CKV_AWS_144,CKV2_AWS_61,CKV2_AWS_62,CKV_AWS_130,CKV2_AWS_11
+            --skip-check CKV_AWS_67,CKV_AWS_18,CKV_AWS_86,CKV_AWS_145,CKV_AWS_144,CKV2_AWS_61,CKV2_AWS_62,CKV_AWS_130,CKV2_AWS_11,CKV_AWS_88,CKV_AWS_382,CKV_AWS_35,CKV_AWS_158,CKV_AWS_252
