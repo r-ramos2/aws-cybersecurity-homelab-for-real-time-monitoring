@@ -49,15 +49,16 @@ jobs:
           shellcheck scripts/splunk_setup.sh
           shellcheck scripts/verify_lab.sh
 
-  # Static IaC security scan with Checkov against CIS/NIST rule sets.
-  # requirements.txt at repo root provides the cache key for pip so
-  # subsequent runs restore the cached wheel instead of re-downloading.
+  # Static IaC security scan with Checkov.
   #
-  # Skipped checks -- intentional lab trade-offs, not oversights:
-  #   CKV_AWS_67  -- CloudTrail is single-region (multi-region adds cost; lab scope)
-  #   CKV_AWS_18  -- S3 access logging disabled (log-of-logs adds no value here)
-  #   CKV_AWS_145 -- CloudTrail bucket uses SSE-S3 (AES256), not SSE-KMS CMK
-  #                  (KMS CMK cost/complexity not justified for a homelab)
+  # The scan runs in soft-fail mode so findings are reported in CI output
+  # without blocking merges. This keeps visibility high while allowing
+  # intentional homelab trade-offs to remain documented and reviewable.
+  #
+  # Examples of accepted lab trade-offs:
+  #   CKV_AWS_67  -- CloudTrail is single-region (multi-region adds cost)
+  #   CKV_AWS_18  -- S3 access logging disabled for the logging bucket
+  #   CKV_AWS_145 -- SSE-S3 used instead of a customer-managed KMS key
   security-scan:
     runs-on: ubuntu-latest
     timeout-minutes: 10
