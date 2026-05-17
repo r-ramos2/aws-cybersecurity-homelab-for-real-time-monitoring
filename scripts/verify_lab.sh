@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Simple smoke test for the AWS Cybersecurity Homelab.
-# Verifies that core resources exist and basic security controls are in place.
+# verify_lab.sh
+# Smoke test and security baseline check for the AWS Cybersecurity Homelab.
+# Verifies core resources exist and key security controls are in place.
 #
 # Requirements:
 #   - AWS CLI configured with the same profile/region used by Terraform
@@ -11,45 +12,177 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TF_DIR="${ROOT_DIR}/terraform"
 
-echo "[INFO] Cybersecurity homelab smoke test starting..."
+PASS=0
+FAIL=0
 
-if ! command -v aws >/dev/null 2>&1; then
+_pass() { echo "[PASS] $*"; (( PASS++ )); }
+_fail() { echo "[FAIL] $*"; (( FAIL++ )); }
+_info() { echo "[INFO] $*"; }
+_warn() { echo "[WARN] $*"; }
+
+echo "[INFO] Cybersecurity homelab smoke test starting..."
+echo "=========================================="
+
+# ── Tool checks ───────────────────────────────────────────────────────────────
+if ! command -v aws &>/dev/null; then
   echo "[ERROR] aws CLI not found in PATH."
   exit 1
 fi
-
-if ! command -v terraform >/dev/null 2>&1; then
+if ! command -v terraform &>/dev/null; then
   echo "[ERROR] terraform not found in PATH."
   exit 1
 fi
 
+# ── Terraform outputs ─────────────────────────────────────────────────────────
 cd "${TF_DIR}"
-
-echo "[INFO] Reading Terraform outputs..."
+_info "Reading Terraform outputs..."
 KALI_ID="$(terraform output -raw kali_instance_id)"
 WIN_ID="$(terraform output -raw windows_instance_id)"
 TOOLS_ID="$(terraform output -raw tools_instance_id)"
-VPC_ID="$(aws ec2 describe-instances --instance-ids "${KALI_ID}" --query 'Reservations[0].Instances[0].VpcId' --output text)"
 
-echo "[INFO] Verifying EC2 instances are running..."
-aws ec2 describe-instances --instance-ids "${KALI_ID}" "${WIN_ID}" "${TOOLS_ID}" \
-  --query 'Reservations[].Instances[].State.Name' --output text
+VPC_ID="$(aws ec2 describe-instances \
+  --instance-ids "${KALI_ID}" \
+  --query 'Reservations[0].Instances[0].VpcId' \
+  --output text)"
 
-echo "[INFO] Verifying VPC Flow Logs exist for VPC ${VPC_ID}..."
-FLOW_STATUS="$(aws ec2 describe-flow-logs --filter "Name=resource-id,Values=${VPC_ID}" --query 'FlowLogs[].FlowLogStatus' --output text || true)"
-if [[ -z "${FLOW_STATUS}" ]]; then
-  echo "[ERROR] No VPC Flow Logs found for VPC ${VPC_ID}."
-  exit 1
+# ── EC2 instance state ────────────────────────────────────────────────────────
+echo ""
+_info "Checking EC2 instance states..."
+STATES=$(aws ec2 describe-instances \
+  --instance-ids "${KALI_ID}" "${WIN_ID}" "${TOOLS_ID}" \
+  --query 'Reservations[].Instances[].[InstanceId,State.Name]' \
+  --output text)
+
+echo "$STATES" | while read -r id state; do
+  if [ "$state" = "running" ]; then
+    _pass "Instance ${id}: ${state}"
+  else
+    _fail "Instance ${id}: ${state} (expected: running)"
+  fi
+done
+
+# ── VPC Flow Logs ─────────────────────────────────────────────────────────────
+echo ""
+_info "Checking VPC Flow Logs for VPC ${VPC_ID}..."
+FLOW_STATUS="$(aws ec2 describe-flow-logs \
+  --filter "Name=resource-id,Values=${VPC_ID}" \
+  --query 'FlowLogs[].FlowLogStatus' \
+  --output text || true)"
+
+if [ -z "$FLOW_STATUS" ]; then
+  _fail "No VPC Flow Logs found for ${VPC_ID}"
+elif echo "$FLOW_STATUS" | grep -q "ACTIVE"; then
+  _pass "VPC Flow Logs: ACTIVE"
+else
+  _fail "VPC Flow Logs found but status is: ${FLOW_STATUS}"
 fi
-echo "[INFO] VPC Flow Logs status: ${FLOW_STATUS}"
 
-echo "[INFO] Verifying IAM instance profile is attached to tools instance..."
-TOOLS_PROFILE="$(aws ec2 describe-instances --instance-ids "${TOOLS_ID}" --query 'Reservations[0].Instances[0].IamInstanceProfile.Arn' --output text || true)"
+# ── IAM instance profile ──────────────────────────────────────────────────────
+echo ""
+_info "Checking IAM instance profile on tools instance..."
+TOOLS_PROFILE="$(aws ec2 describe-instances \
+  --instance-ids "${TOOLS_ID}" \
+  --query 'Reservations[0].Instances[0].IamInstanceProfile.Arn' \
+  --output text || true)"
+
 if [[ "${TOOLS_PROFILE}" == "None" || -z "${TOOLS_PROFILE}" ]]; then
-  echo "[ERROR] Tools instance does not have an IAM instance profile attached."
-  exit 1
+  _fail "Tools instance has no IAM instance profile attached"
+else
+  _pass "Tools instance IAM profile: ${TOOLS_PROFILE}"
 fi
-echo "[INFO] Tools instance IAM profile: ${TOOLS_PROFILE}"
 
-echo "[SUCCESS] Basic smoke tests passed. Lab core resources and logging controls are in place."
+# ── Security groups: check for dangerously open inbound rules ─────────────────
+echo ""
+_info "Checking security groups for overly permissive inbound rules..."
 
+# Collect SG IDs for all three instances
+ALL_SGS=$(aws ec2 describe-instances \
+  --instance-ids "${KALI_ID}" "${WIN_ID}" "${TOOLS_ID}" \
+  --query 'Reservations[].Instances[].SecurityGroups[].GroupId' \
+  --output text | tr '\t' '\n' | sort -u)
+
+DANGEROUS_PORTS=(22 3389 8834 8000 9997)
+OPEN_RULES_FOUND=0
+
+for SG_ID in $ALL_SGS; do
+  for PORT in "${DANGEROUS_PORTS[@]}"; do
+    # Check for 0.0.0.0/0 or ::/0 on sensitive ports
+    OPEN=$(aws ec2 describe-security-groups \
+      --group-ids "$SG_ID" \
+      --query "SecurityGroups[0].IpPermissions[?
+        (FromPort<=${PORT} && ToPort>=${PORT}) &&
+        (IpRanges[?CidrIp=='0.0.0.0/0'] || Ipv6Ranges[?CidrIpv6=='::/0'])
+      ].FromPort" \
+      --output text 2>/dev/null || true)
+
+    if [ -n "$OPEN" ] && [ "$OPEN" != "None" ]; then
+      _fail "SG ${SG_ID}: port ${PORT} is open to 0.0.0.0/0 (world)"
+      OPEN_RULES_FOUND=1
+    fi
+  done
+done
+
+if [ $OPEN_RULES_FOUND -eq 0 ]; then
+  _pass "No sensitive ports open to 0.0.0.0/0 on checked security groups"
+fi
+
+# ── CloudTrail ────────────────────────────────────────────────────────────────
+echo ""
+_info "Checking CloudTrail..."
+CT_STATUS=$(aws cloudtrail describe-trails \
+  --query 'trailList[?HomeRegion==`'"$(aws configure get region || echo us-east-1)"'`].TrailARN' \
+  --output text 2>/dev/null || true)
+
+if [ -z "$CT_STATUS" ]; then
+  _fail "No CloudTrail trail found in this region"
+else
+  # Check at least one trail is logging
+  CT_LOGGING=$(aws cloudtrail get-trail-status \
+    --name "$(echo "$CT_STATUS" | head -1)" \
+    --query 'IsLogging' \
+    --output text 2>/dev/null || true)
+
+  if [ "$CT_LOGGING" = "True" ]; then
+    _pass "CloudTrail is active and logging"
+  else
+    _fail "CloudTrail trail exists but IsLogging=False"
+  fi
+fi
+
+# ── S3 bucket encryption ──────────────────────────────────────────────────────
+echo ""
+_info "Checking S3 bucket default encryption..."
+
+# Get any S3 buckets referenced in Terraform outputs (best-effort)
+S3_BUCKET=""
+S3_BUCKET=$(terraform output -raw logs_bucket_name 2>/dev/null || true)
+
+if [ -n "$S3_BUCKET" ] && [ "$S3_BUCKET" != "null" ]; then
+  ENC=$(aws s3api get-bucket-encryption \
+    --bucket "$S3_BUCKET" \
+    --query 'ServerSideEncryptionConfiguration.Rules[0].ApplyServerSideEncryptionByDefault.SSEAlgorithm' \
+    --output text 2>/dev/null || true)
+
+  if [ -z "$ENC" ] || [ "$ENC" = "None" ]; then
+    _fail "S3 bucket '${S3_BUCKET}' does not have default encryption enabled"
+  else
+    _pass "S3 bucket '${S3_BUCKET}' encryption: ${ENC}"
+  fi
+else
+  _warn "No 'logs_bucket_name' Terraform output found; skipping S3 encryption check"
+fi
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+echo ""
+echo "=========================================="
+TOTAL=$(( PASS + FAIL ))
+echo "Results: ${PASS}/${TOTAL} checks passed"
+if [ $FAIL -eq 0 ]; then
+  echo "[SUCCESS] All checks passed. Lab core resources and security controls are in place."
+else
+  echo "[WARN] ${FAIL} check(s) failed. Review the [FAIL] lines above."
+fi
+echo "=========================================="
+
+# Exit non-zero if any check failed (useful for CI/CD pipelines)
+[ $FAIL -eq 0 ]
