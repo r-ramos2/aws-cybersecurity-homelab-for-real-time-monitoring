@@ -9,7 +9,7 @@ set -euo pipefail
 #   - AWS CLI configured with the same profile/region used by Terraform
 #   - Terraform state available in ./terraform
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/..>" && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TF_DIR="${ROOT_DIR}/terraform"
 
 PASS=0
