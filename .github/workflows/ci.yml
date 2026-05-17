@@ -20,7 +20,7 @@ jobs:
       run:
         working-directory: terraform
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Shellcheck
         run: |
@@ -50,7 +50,8 @@ jobs:
           shellcheck scripts/verify_lab.sh
 
   # Static IaC security scan with Checkov against CIS/NIST rule sets.
-  # pip cache keyed on requirements.txt keeps subsequent runs under 30s.
+  # requirements.txt at repo root provides the cache key for pip so
+  # subsequent runs restore the cached wheel instead of re-downloading.
   #
   # Skipped checks -- intentional lab trade-offs, not oversights:
   #   CKV_AWS_67  -- CloudTrail is single-region (multi-region adds cost; lab scope)
@@ -61,15 +62,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.13"
           cache: pip
 
       - name: Install Checkov
-        run: pip install checkov --quiet
+        run: pip install -r requirements.txt
 
       - name: Checkov scan (Terraform)
         run: |
