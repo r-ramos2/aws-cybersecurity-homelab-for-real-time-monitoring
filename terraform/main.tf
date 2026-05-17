@@ -74,6 +74,16 @@ resource "aws_vpc" "lab" {
   })
 }
 
+# Lock down the VPC default security group — it allows all traffic by default,
+# which is a CIS Benchmark finding. No rules = deny all.
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.lab.id
+
+  tags = merge(local.common_tags, {
+    Name = "${local.project_name}-default-sg-locked"
+  })
+}
+
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.lab.id
   cidr_block              = var.public_subnet_cidr
@@ -171,7 +181,7 @@ resource "aws_route_table_association" "private_assoc" {
 # ============================================
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name              = "/aws/vpc-flow-logs/${aws_vpc.lab.id}"
-  retention_in_days = 14
+  retention_in_days = 365
 
   tags = merge(local.common_tags, {
     Name = "${local.project_name}-vpc-flow-logs"
@@ -244,7 +254,7 @@ resource "aws_flow_log" "vpc" {
 # ============================================
 resource "aws_cloudwatch_log_group" "cloudtrail_cw" {
   name              = "/aws/cloudtrail/${local.project_name}"
-  retention_in_days = 14
+  retention_in_days = 365
 
   tags = merge(local.common_tags, {
     Name = "${local.project_name}-cloudtrail-cw-logs"
@@ -299,7 +309,7 @@ resource "aws_iam_role_policy" "cloudtrail_cw" {
 # ============================================
 resource "aws_cloudwatch_log_group" "tools" {
   name              = "/aws/ec2/${local.project_name}-tools"
-  retention_in_days = 14
+  retention_in_days = 365
 
   tags = merge(local.common_tags, {
     Name = "${local.project_name}-tools-logs"
@@ -541,7 +551,9 @@ resource "aws_iam_instance_profile" "tools" {
 # ============================================
 
 # Kali — attacker, stays public (needs internet for tools; you SSH in directly)
+# Kali — attacker, stays public (needs internet for tools; you SSH in directly)
 resource "aws_instance" "kali" {
+  #checkov:skip=CKV2_AWS_41: Attacker VM uses SSH key auth; no SSM role required.
   ami                         = data.aws_ami.kali.id
   instance_type               = var.kali_instance_type
   subnet_id                   = aws_subnet.public.id
@@ -549,6 +561,8 @@ resource "aws_instance" "kali" {
   associate_public_ip_address = true
   key_name                    = aws_key_pair.deployer.key_name
   user_data                   = file("${path.module}/../scripts/kali_setup.sh")
+  monitoring                  = true
+  ebs_optimized               = true
 
   root_block_device {
     volume_size           = var.kali_volume_size
@@ -588,12 +602,15 @@ resource "aws_instance" "kali" {
 # No public IP; access via RDP tunnel through Kali (see outputs).
 # Outbound internet (Windows Update, agents) goes via NAT Gateway.
 resource "aws_instance" "windows" {
+  #checkov:skip=CKV2_AWS_41: Victim VM intentionally has no IAM role; simulates an unmanaged target.
   ami                         = data.aws_ami.windows.id
   instance_type               = var.windows_instance_type
   subnet_id                   = aws_subnet.private.id
   vpc_security_group_ids      = [aws_security_group.win_kali_sg.id]
   associate_public_ip_address = false
   key_name                    = aws_key_pair.deployer.key_name
+  monitoring                  = true
+  ebs_optimized               = true
 
   root_block_device {
     volume_size           = var.windows_volume_size
@@ -638,6 +655,8 @@ resource "aws_instance" "tools" {
   associate_public_ip_address = true
   key_name                    = aws_key_pair.deployer.key_name
   iam_instance_profile        = aws_iam_instance_profile.tools.name
+  monitoring                  = true
+  ebs_optimized               = true
 
   root_block_device {
     volume_size           = var.tools_volume_size
