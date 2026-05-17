@@ -444,7 +444,7 @@ resource "aws_security_group" "tools_sg" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "${local.project_name}-sg"
+    Name = "${local.project_name}-tools-sg"
   })
 }
 
