@@ -11,6 +11,16 @@ output "vpc_flow_log_group_name" {
   value       = aws_cloudwatch_log_group.vpc_flow_logs.name
 }
 
+output "cloudtrail_log_group_name" {
+  description = "CloudWatch Logs group for CloudTrail events — use this to build metric filters and alarms for real-time API monitoring"
+  value       = aws_cloudwatch_log_group.cloudtrail_cw.name
+}
+
+output "tools_log_group_name" {
+  description = "CloudWatch Logs group for the tools (Splunk / Nessus) instance"
+  value       = aws_cloudwatch_log_group.tools.name
+}
+
 output "tools_instance_profile_name" {
   description = "IAM instance profile attached to the tools instance"
   value       = aws_iam_instance_profile.tools.name
