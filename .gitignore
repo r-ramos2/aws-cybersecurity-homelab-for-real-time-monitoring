@@ -5,6 +5,17 @@ terraform.tfstate.*
 
 # Local overrides
 terraform.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform plan output (may contain secrets)
+*.tfplan
+
+# Crash logs
+crash.log
+crash.*.log
 
 # Generated SSH key
 deployer_key.pem
