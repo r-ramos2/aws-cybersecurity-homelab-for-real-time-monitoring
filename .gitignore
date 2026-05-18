@@ -4,7 +4,7 @@ terraform.tfstate
 terraform.tfstate.*
 
 # Local overrides
-terraform.tfvars
+*.tfvars
 override.tf
 override.tf.json
 *_override.tf
