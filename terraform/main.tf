@@ -560,6 +560,9 @@ resource "aws_instance" "kali" {
   associate_public_ip_address = true
   key_name                    = aws_key_pair.deployer.key_name
   user_data                   = file("${path.module}/../scripts/kali_setup.sh")
+  # Replace the instance automatically when kali_setup.sh changes.
+  # Without this, modifying the bootstrap script has no effect on a running instance.
+  user_data_replace_on_change = true
   monitoring                  = true
   ebs_optimized               = true
 
