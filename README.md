@@ -337,12 +337,13 @@ Default credentials on first login will be set from the installer or must be cha
 
 **4. Create indexes for Windows logs:**
 
-In Splunk Web UI:
+In Splunk Web UI (Settings → Indexes → New Index), create three indexes before deploying the forwarder:
 
-1. Settings → Indexes → New Index
-2. Create index: `win_security`
-3. Set data type: Event
-4. Save
+| Index name        | Data type |
+|-------------------|-----------|
+| `win_security`    | Event     |
+| `win_application` | Event     |
+| `win_system`      | Event     |
 
 **5. Configure Windows Forwarder:**
 
@@ -353,22 +354,25 @@ Add:
 
 ```ini
 [default]
-host = WIN10-WORKSTATION
+# $decideOnStartup resolves to the Windows hostname at forwarder start time.
+# Do not hardcode a hostname here — it breaks source identification when
+# the instance is rebuilt or renamed.
+host = $decideOnStartup
 
 [WinEventLog://Security]
 sourcetype = WinEventLog:Security
-index = win_security
-disabled = false
+index      = win_security
+disabled   = false
 
 [WinEventLog://Application]
 sourcetype = WinEventLog:Application
-index = win_security
-disabled = false
+index      = win_application
+disabled   = false
 
 [WinEventLog://System]
 sourcetype = WinEventLog:System
-index = win_security
-disabled = false
+index      = win_system
+disabled   = false
 ```
 
 Edit `outputs.conf`:
