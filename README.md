@@ -2,7 +2,7 @@
 
 [![Terraform](https://img.shields.io/badge/Terraform-1.5.7-blue)](https://www.terraform.io/) 
 [![AWS](https://img.shields.io/badge/AWS-Cloud-orange)](https://aws.amazon.com/) 
-[![Python](https://img.shields.io/badge/Python-3.13-blue)](https://www.python.org/) 
+[![Python](https://img.shields.io/badge/Python-3.12-blue)](https://www.python.org/) 
 [![Checkov](https://img.shields.io/badge/Checkov-latest-blue)](https://www.checkov.io/) 
 [![Kali](https://img.shields.io/badge/Kali-Linux-blue)](https://www.kali.org/) 
 [![Splunk](https://img.shields.io/badge/Splunk-Enterprise-green)](https://www.splunk.com/) 
